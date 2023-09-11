@@ -9,9 +9,9 @@ import (
 	// "os/signal"
 	// "syscall"
 
-	config "github.com/csci1270-fall-2023/db/pkg/config"
-	repl "github.com/csci1270-fall-2023/db/pkg/repl"
-	list "github.com/csci1270-fall-2023/db/pkg/list"
+	config "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/config"
+	repl "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/repl"
+	list "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/list"
 	// pager "github.com/csci1270-fall-2023/db/pkg/pager"
 	// db "github.com/csci1270-fall-2023/db/pkg/db"
 	// query "github.com/csci1270-fall-2023/db/pkg/query"
