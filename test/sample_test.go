@@ -3,7 +3,7 @@ package test
 import (
 	"testing"
 
-	list "github.com/csci1270-fall-2023/db/pkg/list"
+	list "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/list"
 )
 
 func TestSample(t *testing.T) {
