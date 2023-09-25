@@ -1,4 +1,4 @@
-module github.com/brown-csci1270/dbms-projects-handout
+module github.com/csci1270-fall-2023/dbms-projects-handout
 
 go 1.13
 

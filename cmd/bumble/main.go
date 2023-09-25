@@ -10,15 +10,15 @@ import (
 	// "os/signal"
 	// "syscall"
 
-	pager "github.com/csci1270-fall-2023/db/pkg/pager"
 	config "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/config"
 	list "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/list"
+	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
 	repl "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/repl"
 
-	// db "github.com/csci1270-fall-2023/db/pkg/db"
-	// query "github.com/csci1270-fall-2023/db/pkg/query"
-	// concurrency "github.com/csci1270-fall-2023/db/pkg/concurrency"
-	// recovery "github.com/csci1270-fall-2023/db/pkg/recovery"
+	// db "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/db"
+	// query "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/query"
+	// concurrency "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/concurrency"
+	// recovery "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/recovery"
 
 	uuid "github.com/google/uuid"
 )
