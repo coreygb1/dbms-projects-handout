@@ -9,7 +9,7 @@ type Entry interface {
 
 // Interface for a cursor that traverses a table.
 type Cursor interface {
-	StepForward() error
+	StepForward() bool
 	IsEnd() bool
 	GetEntry() (Entry, error)
 }
