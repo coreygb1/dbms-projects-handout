@@ -77,7 +77,7 @@ func main() {
 	var projectFlag = flag.String("project", "", "choose project: [go,pager,db,query,concurrency,recovery] (required)")
 
 	// [BTREE]
-	// var dbFlag = flag.String("db", "data/", "DB folder")
+	var dbFlag = flag.String("db", "data/", "DB folder")
 
 	// [CONCURRENCY]
 	// var portFlag = flag.Int("p", DEFAULT_PORT, "port number")
