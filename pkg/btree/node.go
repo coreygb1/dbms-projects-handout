@@ -142,7 +142,7 @@ func (node *InternalNode) search(key int64) int64 {
 func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	// Insert the entry into the appropriate child node. Use getChildAt for the indexing
 	childIdx := node.search(key)
-	child, err := node.getAndLockChildAt(childIdx)
+	child, err := node.getChildAt(childIdx)
 	if err != nil {
 		return Split{err: err}
 	}
@@ -167,7 +167,7 @@ func (node *InternalNode) insertSplit(split Split) Split {
 func (node *InternalNode) delete(key int64) {
 	// Get child.
 	childIdx := node.search(key)
-	child, err := node.getAndLockChildAt(childIdx)
+	child, err := node.getChildAt(childIdx)
 	if err != nil {
 		return
 	}
