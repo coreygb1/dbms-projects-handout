@@ -77,7 +77,7 @@ func (table *HashTable) Find(key int64) (utils.Entry, error) {
 		return nil, errors.New("not found")
 	}
 	// Get and lock the corresponding bucket.
-	bucket, err := table.GetBucket(hash, READ_LOCK)
+	bucket, err := table.GetBucket(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func (table *HashTable) Insert(key int64, value int64) error {
 // Update the given key-value pair.
 func (table *HashTable) Update(key int64, value int64) error {
 	hash := Hasher(key, table.depth)
-	bucket, err := table.GetBucket(hash, WRITE_LOCK)
+	bucket, err := table.GetBucket(hash)
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func (table *HashTable) Update(key int64, value int64) error {
 // Delete the given key-value pair, does not coalesce.
 func (table *HashTable) Delete(key int64) error {
 	hash := Hasher(key, table.depth)
-	bucket, err := table.GetBucket(hash, WRITE_LOCK)
+	bucket, err := table.GetBucket(hash)
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func (table *HashTable) Print(w io.Writer) {
 	io.WriteString(w, fmt.Sprintf("global depth: %d\n", table.depth))
 	for i := range table.buckets {
 		io.WriteString(w, fmt.Sprintf("====\nbucket %d\n", i))
-		bucket, err := table.GetBucket(int64(i), READ_LOCK)
+		bucket, err := table.GetBucket(int64(i))
 		if err != nil {
 			continue
 		}
@@ -160,7 +160,7 @@ func (table *HashTable) PrintPN(pn int, w io.Writer) {
 		fmt.Println("out of bounds")
 		return
 	}
-	bucket, err := table.GetBucketByPN(int64(pn), READ_LOCK)
+	bucket, err := table.GetBucketByPN(int64(pn))
 	if err != nil {
 		return
 	}
