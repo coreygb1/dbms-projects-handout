@@ -146,7 +146,7 @@ func (table *HashTable) Print(w io.Writer) {
 			continue
 		}
 		bucket.Print(w)
-		bucket.RUnlock()
+		// bucket.RUnlock()
 		bucket.page.Put()
 	}
 	io.WriteString(w, "====\n")
@@ -165,7 +165,7 @@ func (table *HashTable) PrintPN(pn int, w io.Writer) {
 		return
 	}
 	bucket.Print(w)
-	bucket.RUnlock()
+	// bucket.RUnlock()
 	bucket.page.Put()
 }
 
