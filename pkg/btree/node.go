@@ -5,7 +5,7 @@ import (
 	"io"
 	"sort"
 	"strconv"
-	"math"
+	"errors"
 
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
 )
@@ -54,7 +54,7 @@ func (node *LeafNode) search(key int64) int64 {
 // insert finds the appropriate place in a leaf node to insert a new tuple.
 // if update is true, allow overwriting existing keys. else, error.
 func (node *LeafNode) insert(key int64, value int64, update bool) Split {
-	index = node.search(key)
+	index := node.search(key)
 	if (key == node.getKeyAt(int64(index))) && update == false {
 		return Split{err: errors.New("Duplicate keys cannot be updated")}
 	} else {
@@ -67,7 +67,7 @@ func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 		node.updateNumKeys(node.numKeys + 1)
 	}
 	if node.numKeys >= ENTRIES_PER_LEAF_NODE {
-		return split()
+		return node.split()
 	} else {
 		return Split{isSplit: false}
 	}
@@ -93,18 +93,22 @@ func (node *LeafNode) delete(key int64) {
 
 // split is a helper function to split a leaf node, then propagate the split upwards.
 func (node *LeafNode) split() Split {
-	leaf := createLeafNode(node.page.GetPager())
+	leaf, err := createLeafNode(node.page.GetPager())
+	if err != nil {
+		return Split{
+			err: err,
+		}
+	}
 	defer leaf.getPage().Put() // check if i'm using put correctly
 	medianIndex := (node.numKeys + 1) / 2
 
 	// set new right siblings
 	leaf.setRightSibling(node.rightSiblingPN)
-	node.setRightSibling(leaf.getPage())
+	node.setRightSibling(leaf.getPage().GetPageNum())
 	
 	// fill in the new leaf entries
 	leaf.updateNumKeys(medianIndex) // one less than the median
 	for i := medianIndex; i < node.numKeys; i++ {
-		entry := node.getEntry(i)
 		leaf.updateKeyAt(i - medianIndex, node.getKeyAt(i))
 		leaf.updateValueAt(i - medianIndex, node.getValueAt(i))
 	}
@@ -113,11 +117,12 @@ func (node *LeafNode) split() Split {
 	node.updateNumKeys(node.numKeys - medianIndex) 
 
 	// return split
-	return Split {isSplit: true
-	key: leaf.getKeyAt(0) 
-	leftPN: node.getPage()
-	rightPN: leaf.getPage() // does this accidentally return page object?
-	err: nil
+	return Split{
+		isSplit: true,
+	key: leaf.getKeyAt(0),
+	leftPN: node.getPage().GetPageNum(),
+	rightPN: leaf.getPage().GetPageNum(),
+	err: nil,
 	}
 }
 
