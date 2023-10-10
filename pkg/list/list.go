@@ -1,7 +1,7 @@
 package list
 
 import (
-	"errors"
+	// "errors"
 	"fmt"
 	"io"
 	"strings"
@@ -17,37 +17,74 @@ type List struct {
 
 // Create a new list.
 func NewList() *List {
-	panic("function not yet implemented");
+	return &List{head: nil, tail: nil}
 }
 
 // Get a pointer to the head of the list.
 func (list *List) PeekHead() *Link {
-	panic("function not yet implemented");
+	return list.head
 }
 
 // Get a pointer to the tail of the list.
 func (list *List) PeekTail() *Link {
-	panic("function not yet implemented");
+	return list.tail
 }
 
 // Add an element to the start of the list. Returns the added link.
 func (list *List) PushHead(value interface{}) *Link {
-	panic("function not yet implemented");
+	newLink := &Link{
+		list:  list,
+		prev:  nil,
+		next:  list.head,
+		value: value,
+	}
+	if list.head != nil {
+		list.head.prev = newLink
+	}
+	list.head = newLink
+	if list.tail == nil { // handle the case when the list was empty
+		list.tail = newLink
+	}
+	return newLink
 }
 
 // Add an element to the end of the list. Returns the added link.
 func (list *List) PushTail(value interface{}) *Link {
-	panic("function not yet implemented");
+	newLink := &Link{
+		list:  list,
+		prev:  list.tail,
+		next:  nil,
+		value: value,
+	}
+	if list.tail != nil {
+		list.tail.next = newLink
+	}
+	list.tail = newLink
+	if list.head == nil { // handle the case when the list was empty
+		list.head = newLink
+	}
+	return newLink
 }
 
 // Find an element in a list given a boolean function, f, that evaluates to true on the desired element.
 func (list *List) Find(f func(*Link) bool) *Link {
-	panic("function not yet implemented");
+	check := list.head
+	for check != nil {
+		if f(check) {
+			return check
+		}
+		check = check.next
+	}
+	return nil
 }
 
 // Apply a function to every element in the list. f should alter Link in place.
 func (list *List) Map(f func(*Link)) {
-	panic("function not yet implemented");
+	current := list.head
+	for current != nil {
+		f(current)
+		current = current.next
+	}
 }
 
 // Link struct.
@@ -60,35 +97,76 @@ type Link struct {
 
 // Get the list that this link is a part of.
 func (link *Link) GetList() *List {
-	panic("function not yet implemented");
+	return link.list
 }
 
 // Get the link's value.
 func (link *Link) GetKey() interface{} {
-	panic("function not yet implemented");
+	return link.value
 }
 
 // Set the link's value.
 func (link *Link) SetKey(value interface{}) {
-	panic("function not yet implemented");
+	link.value = value
 }
 
 // Get the link's prev.
 func (link *Link) GetPrev() *Link {
-	panic("function not yet implemented");
+	return link.prev
 }
 
 // Get the link's next.
 func (link *Link) GetNext() *Link {
-	panic("function not yet implemented");
+	return link.next
 }
 
 // Remove this link from its list.
 func (link *Link) PopSelf() {
-	panic("function not yet implemented");
+	if link == nil {
+		return
+	}
+	if link.prev != nil && link.next == nil {
+		link.prev.next = nil
+		link.list.tail = link.prev
+	}
+	if link.prev == nil && link.next != nil {
+		link.next.prev = nil
+		link.list.head = link.next
+	}
+	if link.prev != nil && link.next != nil {
+		link.next.prev = link.prev
+		link.prev.next = link.next
+	}
+	if link.prev == nil && link.next == nil {
+		link.list.head = nil
+		link.list.tail = nil
+	}
+	link.next = nil
+	link.prev = nil
 }
 
 // List REPL.
 func ListRepl(list *List) *repl.REPL {
-	panic("function not yet implemented");
+    r := repl.NewRepl()
+
+    listPrintCommand := func(input string, cfg *repl.REPLConfig) error {
+		var sb strings.Builder
+        current := list.head
+        first := true
+        for current != nil {
+            if !first {
+                sb.WriteString(", ")
+            }
+            sb.WriteString(fmt.Sprintf("%v", current.value))
+            current = current.next
+            first = false
+        }
+        _, err := io.WriteString(cfg.GetWriter(), sb.String()+"\n")
+        return err
+    }
+
+    r.AddCommand("list_print", listPrintCommand, "Prints out of the elements in the list in order")
+    // ... add other commands ...
+
+    return r
 }

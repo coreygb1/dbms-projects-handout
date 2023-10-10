@@ -5,6 +5,7 @@ import (
 	"io"
 	"sort"
 	"strconv"
+	"math"
 
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
 )
@@ -53,7 +54,24 @@ func (node *LeafNode) search(key int64) int64 {
 // insert finds the appropriate place in a leaf node to insert a new tuple.
 // if update is true, allow overwriting existing keys. else, error.
 func (node *LeafNode) insert(key int64, value int64, update bool) Split {
-	panic("function not yet implemented")
+	index = node.search(key)
+	if (key == node.getKeyAt(int64(index))) && update == false {
+		return Split{err: errors.New("Duplicate keys cannot be updated")}
+	} else {
+		for i := index; i < node.numKeys-1; i++ {
+			node.updateKeyAt(i+1, node.getKeyAt(i)) // make sure no error when range too large
+			node.updateValueAt(i+1, node.getValueAt(i))
+		}
+		node.updateKeyAt(index, key)
+		node.updateValueAt(index, value)
+		node.updateNumKeys(node.numKeys + 1)
+	}
+	if node.numKeys >= ENTRIES_PER_LEAF_NODE {
+		return split()
+	} else {
+		return Split{isSplit: false}
+	}
+
 }
 
 // delete removes a given tuple from the leaf node, if the given key exists.
@@ -75,7 +93,32 @@ func (node *LeafNode) delete(key int64) {
 
 // split is a helper function to split a leaf node, then propagate the split upwards.
 func (node *LeafNode) split() Split {
-	panic("function not yet implemented")
+	leaf := createLeafNode(node.page.GetPager())
+	defer leaf.getPage().Put() // check if i'm using put correctly
+	medianIndex := (node.numKeys + 1) / 2
+
+	// set new right siblings
+	leaf.setRightSibling(node.rightSiblingPN)
+	node.setRightSibling(leaf.getPage())
+	
+	// fill in the new leaf entries
+	leaf.updateNumKeys(medianIndex) // one less than the median
+	for i := medianIndex; i < node.numKeys; i++ {
+		entry := node.getEntry(i)
+		leaf.updateKeyAt(i - medianIndex, node.getKeyAt(i))
+		leaf.updateValueAt(i - medianIndex, node.getValueAt(i))
+	}
+
+	// "delete" old leaf overflow entries by changing numKeys
+	node.updateNumKeys(node.numKeys - medianIndex) 
+
+	// return split
+	return Split {isSplit: true
+	key: leaf.getKeyAt(0) 
+	leftPN: node.getPage()
+	rightPN: leaf.getPage() // does this accidentally return page object?
+	err: nil
+	}
 }
 
 // get returns the value associated with a given key from the leaf node.

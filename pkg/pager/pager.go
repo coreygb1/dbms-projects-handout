@@ -134,20 +134,121 @@ func (pager *Pager) ReadPageFromDisk(page *Page, pagenum int64) error {
 // NewPage returns an unused buffer from the free or unpinned list
 // the ptMtx should be locked on entry
 func (pager *Pager) NewPage(pagenum int64) (*Page, error) {
-	panic("function not yet implemented")
+
+
+	// CASE 1
+	// Take from freeList
+	link := pager.freeList.PeekHead()
+	if link != nil {
+		// update the fields
+		pager.pageTable[pagenum] = link
+		page := link.GetKey().(*Page) 
+		page.pager = pager
+		page.pagenum = pagenum
+		return page, nil
+	}
+
+	// CASE 2
+	// Unpinned not backed by file
+	if pager.HasFile() == false {
+		// throw error
+		return nil, errors.New("No free pages, unpinned pages not backed by disk")
+	}
+
+	// CASE 3
+	// try retrieving the first page in the unpinned list. If it exists, 
+	// flush contents & reset/update the page fields.
+	link2 := pager.unpinnedList.PeekHead()
+	if link2 != nil {
+		// update the fields
+		pager.pageTable[pagenum] = link2
+		page2 := link2.GetKey().(*Page)
+		pager.FlushPage(page2)
+		page2.pager = pager
+		page2.pagenum = pagenum
+		page2.SetDirty(false)
+		return page2, nil
+	}
+	// CASE 4
+	// All fails
+	return nil, errors.New("no available pages")
 }
+
+
 
 // getPage returns the page corresponding to the given pagenum.
 func (pager *Pager) GetPage(pagenum int64) (page *Page, err error) {
-	panic("function not yet implemented")
+	// CASE 1
+	// invalid page
+	if pagenum < 0 {
+		return nil, errors.New("invalid pagenum")
+	}
+	pager.ptMtx.Lock()
+	defer pager.ptMtx.Unlock()
+	// CASE 2
+	// Already in pagetable
+	link, found := pager.pageTable[pagenum]
+	if found {
+		page_ret := link.GetKey().(*Page)
+		page_ret.Get()
+		// CASE 2.1
+		// if previously pinned, return
+		if page_ret.pinCount > 1 {
+			return page_ret, nil
+		} else {
+			// CASE 2.2
+			// if not previously pinned, move from unpinned to pinned list
+			link.PopSelf()
+			pager.pinnedList.PushTail(page_ret)
+			return page_ret, nil
+		}
+	}
+	// CASE 3
+	// make new page
+	page_ret2, error := pager.NewPage(pagenum)
+	// CASE 3.1
+	// failure building page
+	if error != nil {
+		return nil, error
+	}
+	// Update pinned/unpinned
+	page_ret2.Get()
+	pager.pageTable[pagenum].PopSelf()
+	pager.pinnedList.PushTail(page_ret2)
+	// CASE 3.2
+	// Goes beyond pagenum size
+	if pagenum > pager.maxPageNum {
+		pager.maxPageNum = pagenum
+		page_ret2.SetDirty(false) // in case it is a new blank page and dirty is set incorrectly
+		pager.ReadPageFromDisk(page_ret2, pagenum) // not sure if i should read from disk
+	// CASE 3.3
+	// Within range of pagenum size
+	} else {
+		pager.ReadPageFromDisk(page_ret2, pagenum)
+	}
+	return page_ret2, nil
 }
 
 // Flush a particular page to disk.
 func (pager *Pager) FlushPage(page *Page) {
-	panic("function not yet implemented")
+	if page.IsDirty() {
+		offset := page.pagenum*PAGESIZE
+		pager.file.WriteAt(*page.GetData(), offset)
+	}
 }
+
 
 // Flushes all dirty pages.
 func (pager *Pager) FlushAllPages() {
-	panic("function not yet implemented")
+	pin := pager.pinnedList.PeekHead()
+	for pin != nil {
+		pager.FlushPage(pin.GetKey().(*Page))
+		pin = pin.GetNext()
+	}
+	
+	unpin := pager.unpinnedList.PeekHead()
+	for unpin != nil {
+		pager.FlushPage(unpin.GetKey().(*Page))
+		unpin = unpin.GetNext()
+	}
 }
