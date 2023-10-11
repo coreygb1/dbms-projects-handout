@@ -219,8 +219,8 @@ func (node *InternalNode) insertSplit(split Split) Split {
 		node.updatePNAt(i+2, node.getPNAt(i+1)) 
 	}
 	node.updateKeyAt(index, split.key)
-	node.updatePNAt(i, split.leftPN) 
-	node.updatePNAt(i+1, split.rightPN)
+	node.updatePNAt(index, split.leftPN) 
+	node.updatePNAt(index+1, split.rightPN)
 	node.updateNumKeys(node.numKeys + 1)
 	
 	if node.numKeys >= KEYS_PER_INTERNAL_NODE {
