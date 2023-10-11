@@ -109,9 +109,13 @@ func (node *LeafNode) split() Split {
 	// fill in the new leaf entries
 	leaf.updateNumKeys(medianIndex) // one less than the median
 	for i := medianIndex; i < node.numKeys; i++ {
-		leaf.updateKeyAt(i - medianIndex, node.getKeyAt(i))
-		leaf.updateValueAt(i - medianIndex, node.getValueAt(i))
+		entry := BTreeEntry{
+			key:   node.getKeyAt(i),
+			value: node.getValueAt(i),
+		}
+		leaf.modifyEntry(i-medianIndex, entry)
 	}
+	
 
 	// "delete" old leaf overflow entries by changing numKeys
 	node.updateNumKeys(node.numKeys - medianIndex) 
@@ -208,7 +212,22 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 // insertSplit inserts a split result into an internal node.
 // If this insertion results in another split, the split is cascaded upwards.
 func (node *InternalNode) insertSplit(split Split) Split {
-	panic("function not yet implemented")
+
+	index := node.search(split.key)
+	for i := index; i < node.numKeys-1; i++ {
+		node.updateKeyAt(i+1, node.getKeyAt(i)) 
+		node.updatePNAt(i+2, node.getPNAt(i+1)) 
+	}
+	node.updateKeyAt(index, split.key)
+	node.updatePNAt(i, split.leftPN) 
+	node.updatePNAt(i+1, split.rightPN)
+	node.updateNumKeys(node.numKeys + 1)
+	
+	if node.numKeys >= KEYS_PER_INTERNAL_NODE {
+		return node.split()
+	} else {
+		return Split{isSplit: false}
+	}
 }
 
 // delete removes a given tuple from the leaf node, if the given key exists.
@@ -226,7 +245,32 @@ func (node *InternalNode) delete(key int64) {
 
 // split is a helper function that splits an internal node, then propagates the split upwards.
 func (node *InternalNode) split() Split {
-	panic("function not yet implemented")
+	intern, err := createInternalNode(node.page.GetPager())
+	if err != nil {
+		return Split{
+			err: err,
+		}
+	}
+	defer intern.getPage().Put() // check if i'm using put correctly
+	medianIndex := (node.numKeys + 1) / 2
+	
+	// fill in the new leaf entries
+	intern.updateNumKeys(medianIndex) // one less than the median
+	for i := medianIndex; i < node.numKeys; i++ {
+		intern.updateKeyAt(i-medianIndex, node.getKeyAt(i))
+	}
+	
+	// "delete" old node overflow entries by changing numKeys
+	node.updateNumKeys(node.numKeys - medianIndex) 
+
+	// return split
+	return Split{
+		isSplit: true,
+	key: intern.getKeyAt(0),
+	leftPN: node.getPage().GetPageNum(),
+	rightPN: intern.getPage().GetPageNum(),
+	err: nil,
+	}
 }
 
 // get returns the value associated with a given key from the leaf node.
