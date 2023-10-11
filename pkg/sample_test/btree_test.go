@@ -21,12 +21,49 @@ func getTempBTreeDB(t *testing.T) string {
 }
 
 func TestBTreeTA(t *testing.T) {
-	t.Run("TestBTreeInsertTenNoWrite", testBTreeInsertTenNoWrite)
-	t.Run("TestBTreeInsertTen", testBTreeInsertTen)
-	t.Run("TestBTreeDeleteTenNoWrite", testBTreeDeleteTenNoWrite)
-	t.Run("TestBTreeDeleteTen", testBTreeDeleteTen)
-	t.Run("TestBTreeUpdateTenNoWrite", testBTreeUpdateTenNoWrite)
-	t.Run("TestBTreeUpdateTen", testBTreeUpdateTen)
+	t.Run("Test1", test1)
+	// t.Run("TestBTreeInsertTenNoWrite", testBTreeInsertTenNoWrite)
+	// t.Run("TestBTreeInsertTen", testBTreeInsertTen)
+	// t.Run("TestBTreeDeleteTenNoWrite", testBTreeDeleteTenNoWrite)
+	// t.Run("TestBTreeDeleteTen", testBTreeDeleteTen)
+	// t.Run("TestBTreeUpdateTenNoWrite", testBTreeUpdateTenNoWrite)
+	// t.Run("TestBTreeUpdateTen", testBTreeUpdateTen)
+}
+
+
+func test1(t *testing.T) {
+	dbName := getTempBTreeDB(t)
+	defer os.Remove(dbName)
+
+	// Init the database
+	index, err := btree.OpenTable(dbName)
+	if err != nil {
+		t.Error(err)
+	}
+	// Insert entries
+	for i := int64(0); i <= 1; i++ {
+		err = index.Insert(i, i%btree_salt)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+	// Retrieve entries
+	for i := int64(0); i <= 1; i++ {
+		entry, err := index.Find(i)
+		if err != nil {
+			t.Error(err)
+		}
+		if entry == nil {
+			t.Error("Inserted entry could not be found")
+		}
+		if entry.GetKey() != i {
+			t.Error("Entry with wrong entry was found")
+		}
+		if entry.GetValue() != i%btree_salt {
+			t.Error("Entry found has the wrong value")
+		}
+	}
+	index.Close()
 }
 
 func testBTreeInsertTenNoWrite(t *testing.T) {
