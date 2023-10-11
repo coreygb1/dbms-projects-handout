@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"fmt"
+	// "bytes"
 
 	btree "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/btree"
 )
@@ -40,16 +42,24 @@ func test1(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	
 	// Insert entries
-	for i := int64(0); i <= 10; i++ {
+	for i := int64(0); i <= 4; i++ { // note that I changed the leaf size to 5
 		err = index.Insert(i, i%btree_salt)
 		if err != nil {
 			t.Error(err)
 		}
 	}
-	// // Retrieve entries
-	for i := int64(0); i <= 10; i++ {
+	fmt.Println("done adding entries")
+
+	// var buffer bytes.Buffer // create a buffer to hold the printed table
+    // index.Print(&buffer)    // print the table to the buffer
+    // t.Log(buffer.String())  // log the buffer's content to the test log
+
+	// Retrieve entries
+	for i := int64(0); i <= 4; i++ {
 		entry, err := index.Find(i)
+		fmt.Printf("entry key: %v. entry value: %v \n", entry.GetKey(), entry.GetValue())
 		if err != nil {
 			t.Error(err)
 		}
