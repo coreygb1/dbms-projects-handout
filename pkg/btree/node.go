@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"errors"
-	// "bytes"
+	"bytes"
 
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
 )
@@ -95,22 +95,10 @@ func (node *LeafNode) delete(key int64) {
 
 // split is a helper function to split a leaf node, then propagate the split upwards.
 func (node *LeafNode) split() Split {
-	
-	// // -----------
-	// bufBefore := &bytes.Buffer{}
-	// node.printNode(bufBefore, "", "    ")
-	// fmt.Printf("Node before split: \n%s", bufBefore.String())
-	// // -----------
 
 	///// create and set new sibling leaf
 	leaf, err := createLeafNode(node.page.GetPager()) // this writes over my page
 
-	/ // -----------
-	// bufBefore := &bytes.Buffer{}
-	// node.printNode(bufBefore, "", "    ")
-	// fmt.Printf("Node before split: \n%s", bufBefore.String())
-	// // -----------
-	
 	if err != nil {
 		fmt.Println("error \n")
 		return Split{
@@ -120,28 +108,28 @@ func (node *LeafNode) split() Split {
 	defer leaf.getPage().Put() // check if i'm using put correctly
 	node.setRightSibling(leaf.getPage().GetPageNum()) // set new right siblings
 
-	medianIndex := (node.numKeys + 1) / 2
+	medianKey := (node.numKeys + 1) / 2
 	
 	// fill in the new leaf entries
-	leaf.updateNumKeys(medianIndex) // one less than the median
-	for i := medianIndex; i < node.numKeys; i++ {
+	leaf.updateNumKeys(medianKey) 
+	for i := medianKey; i <= node.numKeys; i++ {
 		entry := BTreeEntry{
-			key:   node.getKeyAt(i),
-			value: node.getValueAt(i),
+			key:   node.getKeyAt(i-1),
+			value: node.getValueAt(i-1),
 		}
-		leaf.modifyEntry(i-medianIndex, entry)
+		leaf.modifyEntry(i-medianKey, entry)
 	}
 	
 	// "delete" old leaf overflow entries by changing numKeys
-	node.updateNumKeys(node.numKeys - medianIndex) 
+	node.updateNumKeys(node.numKeys - medianKey) 
 
-	// // Print both nodes after the split
-	// bufAfterOriginal := &bytes.Buffer{}
-	// bufAfterNewLeaf := &bytes.Buffer{}
-	// node.printNode(bufAfterOriginal, "", "    ")
-	// leaf.printNode(bufAfterNewLeaf, "", "    ")
-	// fmt.Printf("Node after split: \n%s", bufAfterOriginal.String())
-	// fmt.Printf("New Leaf after split: \n%s", bufAfterNewLeaf.String())
+	// Print both nodes after the split
+	bufAfterOriginal := &bytes.Buffer{}
+	bufAfterNewLeaf := &bytes.Buffer{}
+	node.printNode(bufAfterOriginal, "", "    ")
+	leaf.printNode(bufAfterNewLeaf, "", "    ")
+	fmt.Printf("Node after split: \n%s", bufAfterOriginal.String())
+	fmt.Printf("New Leaf after split: \n%s", bufAfterNewLeaf.String())
 
 	// return split
 	return Split{
