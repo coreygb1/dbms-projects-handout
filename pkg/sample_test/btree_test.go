@@ -4,8 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-	"fmt"
-	// "bytes"
 
 	btree "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/btree"
 )
@@ -23,58 +21,14 @@ func getTempBTreeDB(t *testing.T) string {
 }
 
 func TestBTreeTA(t *testing.T) {
-	t.Run("Test1", test1)
-	// t.Run("TestBTreeInsertTenNoWrite", testBTreeInsertTenNoWrite)
-	// t.Run("TestBTreeInsertTen", testBTreeInsertTen)
-	// t.Run("TestBTreeDeleteTenNoWrite", testBTreeDeleteTenNoWrite)
-	// t.Run("TestBTreeDeleteTen", testBTreeDeleteTen)
-	// t.Run("TestBTreeUpdateTenNoWrite", testBTreeUpdateTenNoWrite)
-	// t.Run("TestBTreeUpdateTen", testBTreeUpdateTen)
+	t.Run("TestBTreeInsertTenNoWrite", testBTreeInsertTenNoWrite)
+	t.Run("TestBTreeInsertTen", testBTreeInsertTen)
+	t.Run("TestBTreeDeleteTenNoWrite", testBTreeDeleteTenNoWrite)
+	t.Run("TestBTreeDeleteTen", testBTreeDeleteTen)
+	t.Run("TestBTreeUpdateTenNoWrite", testBTreeUpdateTenNoWrite)
+	t.Run("TestBTreeUpdateTen", testBTreeUpdateTen)
 }
 
-
-func test1(t *testing.T) {
-	dbName := getTempBTreeDB(t)
-	defer os.Remove(dbName)
-
-	// Init the database
-	index, err := btree.OpenTable(dbName)
-	if err != nil {
-		t.Error(err)
-	}
-	
-	// Insert entries
-	for i := int64(0); i <= 4; i++ { // note that I changed the leaf size to 5
-		err = index.Insert(i, i%btree_salt)
-		if err != nil {
-			t.Error(err)
-		}
-	}
-	fmt.Println("done adding entries")
-
-	// var buffer bytes.Buffer // create a buffer to hold the printed table
-    // index.Print(&buffer)    // print the table to the buffer
-    // t.Log(buffer.String())  // log the buffer's content to the test log
-
-	// Retrieve entries
-	for i := int64(0); i <= 4; i++ {
-		entry, err := index.Find(i)
-		fmt.Printf("entry key: %v. entry value: %v \n", entry.GetKey(), entry.GetValue())
-		if err != nil {
-			t.Error(err)
-		}
-		if entry == nil {
-			t.Error("Inserted entry could not be found")
-		}
-		if entry.GetKey() != i {
-			t.Error("Entry with wrong entry was found")
-		}
-		if entry.GetValue() != i%btree_salt {
-			t.Error("Entry found has the wrong value")
-		}
-	}
-	index.Close()
-}
 
 func testBTreeInsertTenNoWrite(t *testing.T) {
 	dbName := getTempBTreeDB(t)
@@ -86,14 +40,14 @@ func testBTreeInsertTenNoWrite(t *testing.T) {
 		t.Error(err)
 	}
 	// Insert entries
-	for i := int64(0); i <= 10; i++ {
+	for i := int64(0); i <= 50; i++ {
 		err = index.Insert(i, i%btree_salt)
 		if err != nil {
 			t.Error(err)
 		}
 	}
 	// Retrieve entries
-	for i := int64(0); i <= 10; i++ {
+	for i := int64(0); i <= 50; i++ {
 		entry, err := index.Find(i)
 		if err != nil {
 			t.Error(err)

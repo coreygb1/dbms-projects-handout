@@ -3,7 +3,6 @@ package btree
 import (
 	"errors"
 	"io"
-	"fmt"
 
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
 	utils "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/utils"
@@ -92,7 +91,6 @@ func (table *BTreeIndex) Insert(key int64, value int64) error {
 		var newNodePN int64
 		// Depending on whether the root is a leaf or an internal node...
 		if rootNode.getNodeType() == LEAF_NODE {
-			fmt.Println("It's a leaf node")
 			// Create a new leaf node.
 			newNode, err := createLeafNode(table.pager)
 			if err != nil {

@@ -56,10 +56,19 @@ func (node *LeafNode) search(key int64) int64 {
 // if update is true, allow overwriting existing keys. else, error.
 func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 	index := node.search(key)
-	if (key == node.getKeyAt(int64(index))) && update == false && index != 0 { // added index != 0. May need to delete
+	if (update == true) {
+		if (key == node.getKeyAt(int64(index))) {
+			node.updateValueAt(index, value)
+		} else {
+			fmt.Println("update key not found")
+		}
+		return Split{isSplit: false}
+	}
+	
+	if (key == node.getKeyAt(int64(index))) && node.numKeys != 0 { // added index != 0. May need to delete
 		return Split{err: errors.New("Duplicate keys cannot be updated")}
 	} else {
-		for i := index; i < node.numKeys-1; i++ {
+		for i := node.numKeys-1; i >= index; i-- {
 			node.updateKeyAt(i+1, node.getKeyAt(i)) // make sure no error when range too large
 			node.updateValueAt(i+1, node.getValueAt(i))
 		}
@@ -67,7 +76,6 @@ func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 		node.updateValueAt(index, value)
 		node.updateNumKeys(node.numKeys + 1)
 	}
-	fmt.Printf("numKeys: %v \n", node.numKeys)
 	if node.numKeys >= ENTRIES_PER_LEAF_NODE {
 		return node.split()
 	} else {
@@ -95,9 +103,16 @@ func (node *LeafNode) delete(key int64) {
 
 // split is a helper function to split a leaf node, then propagate the split upwards.
 func (node *LeafNode) split() Split {
-
+	fmt.Println("split leaf")
 	///// create and set new sibling leaf
 	leaf, err := createLeafNode(node.page.GetPager()) // this writes over my page
+
+	// -----------
+	// Print node before the split
+	bufBefore := &bytes.Buffer{}
+	node.printNode(bufBefore, "", "    ")
+	fmt.Printf("Node before split: \n%s", bufBefore.String())
+	// -----------
 
 	if err != nil {
 		fmt.Println("error \n")
@@ -123,6 +138,7 @@ func (node *LeafNode) split() Split {
 	// "delete" old leaf overflow entries by changing numKeys
 	node.updateNumKeys(node.numKeys - medianKey) 
 
+	// -----------
 	// Print both nodes after the split
 	bufAfterOriginal := &bytes.Buffer{}
 	bufAfterNewLeaf := &bytes.Buffer{}
@@ -130,6 +146,7 @@ func (node *LeafNode) split() Split {
 	leaf.printNode(bufAfterNewLeaf, "", "    ")
 	fmt.Printf("Node after split: \n%s", bufAfterOriginal.String())
 	fmt.Printf("New Leaf after split: \n%s", bufAfterNewLeaf.String())
+	// -----------
 
 	// return split
 	return Split{
@@ -218,6 +235,15 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 		split := node.insertSplit(result)
 		return split
 	}
+
+	// -----------
+	// Print node after insert
+	bufAfter := &bytes.Buffer{}
+	node.printNode(bufAfter, "", "    ")
+	fmt.Printf("Node after split: \n%s", bufAfter.String())
+	// -----------
+
+
 	return Split{err: result.err}
 }
 
@@ -225,15 +251,33 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 // If this insertion results in another split, the split is cascaded upwards.
 func (node *InternalNode) insertSplit(split Split) Split {
 	fmt.Println("insertsplit has started")
+
+	// -----------
+	// Print node before the split
+	bufBefore := &bytes.Buffer{}
+	node.printNode(bufBefore, "", "    ")
+	fmt.Printf("Node before split: \n%s", bufBefore.String())
+	// -----------
+
 	index := node.search(split.key)
-	for i := index; i < node.numKeys-1; i++ {
-		node.updateKeyAt(i+1, node.getKeyAt(i)) 
-		node.updatePNAt(i+2, node.getPNAt(i+1)) 
+	if index < node.numKeys {
+		for i := node.numKeys-1; i >= index; i-- {
+			node.updateKeyAt(i+1, node.getKeyAt(i)) 
+			node.updatePNAt(i+2, node.getPNAt(i+1))
+		}
 	}
-	node.updateKeyAt(index, split.key)
-	node.updatePNAt(index, split.leftPN) 
-	node.updatePNAt(index+1, split.rightPN)
+	fmt.Printf("index: %v \n newkey: %v \n numkeys: %v \n", index, split.key, node.numKeys)
 	node.updateNumKeys(node.numKeys + 1)
+	node.updateKeyAt(index, split.key)
+	node.updatePNAt(index, split.leftPN)
+	node.updatePNAt(index+1, split.rightPN)
+
+	// -----------
+	// Print node before the split
+	bufAfter := &bytes.Buffer{}
+	node.printNode(bufAfter, "", "    ")
+	fmt.Printf("Node after split: \n%s", bufBefore.String())
+	// -----------
 	
 	if node.numKeys >= KEYS_PER_INTERNAL_NODE {
 		return node.split()
@@ -255,26 +299,48 @@ func (node *InternalNode) delete(key int64) {
 	child.delete(key)
 }
 
+
 // split is a helper function that splits an internal node, then propagates the split upwards.
 func (node *InternalNode) split() Split {
-	fmt.Println("split internal has started")
+	fmt.Println("split has started")
+
+	// -----------
+	// Print node before the split
+	bufBefore := &bytes.Buffer{}
+	node.printNode(bufBefore, "", "    ")
+	fmt.Printf("Node before split: \n%s", bufBefore.String())
+	// -----------
+
 	intern, err := createInternalNode(node.page.GetPager())
 	if err != nil {
 		return Split{
 			err: err,
 		}
 	}
+
 	defer intern.getPage().Put() // check if i'm using put correctly
-	medianIndex := (node.numKeys + 1) / 2
+	medianKey := (node.numKeys + 1) / 2
+	
+	fmt.Printf("Median Key %v", medianKey)
 	
 	// fill in the new leaf entries
-	intern.updateNumKeys(medianIndex) // one less than the median
-	for i := medianIndex; i < node.numKeys; i++ {
-		intern.updateKeyAt(i-medianIndex, node.getKeyAt(i))
+	intern.updateNumKeys(medianKey)
+	for i := medianKey; i <= node.numKeys; i++ {
+		intern.updateKeyAt(i-medianKey, node.getKeyAt(i-1))
 	}
 	
 	// "delete" old node overflow entries by changing numKeys
-	node.updateNumKeys(node.numKeys - medianIndex) 
+	node.updateNumKeys(node.numKeys - medianKey)
+
+	// -----------
+	// Print both nodes after the split
+	bufAfterOriginal := &bytes.Buffer{}
+	bufAfterNewLeaf := &bytes.Buffer{}
+	node.printNode(bufAfterOriginal, "", "    ")
+	intern.printNode(bufAfterNewLeaf, "", "    ")
+	fmt.Printf("Old node after split: \n%s", bufAfterOriginal.String())
+	fmt.Printf("New node after split: \n%s", bufAfterNewLeaf.String())
+	// -----------
 
 	// return split
 	return Split{
