@@ -61,7 +61,7 @@ func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 			node.updateValueAt(index, value)
 			return Split{isSplit: false}
 		} else {
-			return Split{err: errors.New("entry could not be found")}
+			return Split{err: errors.New("Update key not found")}
 		}
 	}
 	
