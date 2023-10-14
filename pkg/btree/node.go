@@ -59,10 +59,10 @@ func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 	if (update == true) {
 		if (key == node.getKeyAt(int64(index))) {
 			node.updateValueAt(index, value)
+			return Split{isSplit: false}
 		} else {
-			return nil, errors.New("entry could not be found")
+			return Split{err: errors.New("entry could not be found")}
 		}
-		return Split{isSplit: false}
 	}
 	
 	if (key == node.getKeyAt(int64(index))) && node.numKeys != 0 {
