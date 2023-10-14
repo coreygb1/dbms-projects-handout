@@ -56,7 +56,7 @@ func (node *LeafNode) search(key int64) int64 {
 func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 	index := node.search(key)
 	if (update == true) {
-		if (index < node.numKeys) && (key == node.getKeyAt(int64(index)) {
+		if (index < node.numKeys) && (key == node.getKeyAt(int64(index))) {
 			node.updateValueAt(index, value)
 			return Split{isSplit: false}
 		} else {
