@@ -56,7 +56,7 @@ func (node *LeafNode) search(key int64) int64 {
 func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 	index := node.search(key)
 	if (update == true) {
-		if (key == node.getKeyAt(int64(index))) {
+		if (index < node.numKeys) && (key == node.getKeyAt(int64(index)) {
 			node.updateValueAt(index, value)
 			return Split{isSplit: false}
 		} else {
@@ -64,7 +64,7 @@ func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 		}
 	}
 	
-	if (key == node.getKeyAt(int64(index))) && node.numKeys != 0 {
+	if (key == node.getKeyAt(int64(index))) && (index < node.numKeys) {
 		return Split{err: fmt.Errorf("Duplicate keys cannot be updated")}
 	} else {
 		for i := node.numKeys-1; i >= index; i-- {
@@ -242,14 +242,6 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 // insertSplit inserts a split result into an internal node.
 // If this insertion results in another split, the split is cascaded upwards.
 func (node *InternalNode) insertSplit(split Split) Split {
-	// fmt.Println("insertsplit has started")
-
-	// // -----------
-	// // Print node before the split
-	// bufBefore := &bytes.Buffer{}
-	// node.printNode(bufBefore, "", "    ")
-	// fmt.Printf("Node before addition: \n%s", bufBefore.String())
-	// // -----------
 
 	index := node.search(split.key)
 	if index < node.numKeys {
@@ -263,11 +255,6 @@ func (node *InternalNode) insertSplit(split Split) Split {
 	node.updateKeyAt(index, split.key)
 	node.updatePNAt(index+1, split.rightPN)
 
-	// // -----------
-	// bufAfter := &bytes.Buffer{}
-	// node.printNode(bufAfter, "", "    ")
-	// fmt.Printf("insertsplit node after addition: \n%s", bufBefore.String())
-	// // -----------
 	
 	if node.numKeys >= KEYS_PER_INTERNAL_NODE {
 		return node.split()
@@ -288,7 +275,6 @@ func (node *InternalNode) delete(key int64) {
 	// Delete from child.
 	child.delete(key)
 }
-
 
 // split is a helper function that splits an internal node, then propagates the split upwards.
 func (node *InternalNode) split() Split {
