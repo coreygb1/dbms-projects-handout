@@ -103,6 +103,21 @@ func (table *BTreeIndex) TableFind(key int64) (utils.Cursor, error) {
 // TableFindRange returns a slice of Entries with keys between the startKey and endKey.
 func (table *BTreeIndex) TableFindRange(startKey int64, endKey int64) ([]utils.Entry, error) {
 	panic("function not yet implemented")
+	// start := TableFind(startKey)
+	// end := TableFind(endKey)
+	// slice := make([]BTreeEntry, 0)
+	
+	// end = false
+	// entry_key = start.curNode.getKeyAt(start.cellnum)
+	// entry_value = start.curNode.getValueAt(start.cellnum)
+	// for end != true {
+
+	// 	entry = BTreeEntry{ 
+	// 		key = entry_key
+	// 		value = entry_value }
+	// 	append(slice, entry)
+	// 	end = cursor.StepForward()
+	// }
 }
 
 // stepForward moves the cursor ahead by one entry.
