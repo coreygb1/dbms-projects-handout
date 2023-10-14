@@ -5,7 +5,6 @@ import (
 	"io"
 	"sort"
 	"strconv"
-	"errors"
 	// "bytes"
 
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
@@ -61,12 +60,12 @@ func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 			node.updateValueAt(index, value)
 			return Split{isSplit: false}
 		} else {
-			return Split{err: errors.New("Update key not found")}
+			return Split{err: fmt.Errorf("Update key not found")}
 		}
 	}
 	
 	if (key == node.getKeyAt(int64(index))) && node.numKeys != 0 {
-		return Split{err: errors.New("Duplicate keys cannot be updated")}
+		return Split{err: fmt.Errorf("Duplicate keys cannot be updated")}
 	} else {
 		for i := node.numKeys-1; i >= index; i-- {
 			node.updateKeyAt(i+1, node.getKeyAt(i)) // make sure no error when range too large
