@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"errors"
-	"bytes"
+	// "bytes"
 
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
 )
@@ -213,7 +213,7 @@ func (node *InternalNode) search(key int64) int64 {
 
 // insert finds the appropriate place in a leaf node to insert a new tuple.
 func (node *InternalNode) insert(key int64, value int64, update bool) Split {
-	fmt.Println("insert internal has started")
+	// fmt.Println("insert internal has started")
 	// Insert the entry into the appropriate child node. Use getChildAt for the indexing
 	childIdx := node.search(key)
 	child, err := node.getChildAt(childIdx)
@@ -243,7 +243,7 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 // insertSplit inserts a split result into an internal node.
 // If this insertion results in another split, the split is cascaded upwards.
 func (node *InternalNode) insertSplit(split Split) Split {
-	fmt.Println("insertsplit has started")
+	// fmt.Println("insertsplit has started")
 
 	// // -----------
 	// // Print node before the split
@@ -293,7 +293,7 @@ func (node *InternalNode) delete(key int64) {
 
 // split is a helper function that splits an internal node, then propagates the split upwards.
 func (node *InternalNode) split() Split {
-	fmt.Println("split has started")
+	// fmt.Println("split has started")
 
 	intern, err := createInternalNode(node.page.GetPager())
 	if err != nil {
@@ -319,16 +319,16 @@ func (node *InternalNode) split() Split {
 	// "delete" old node overflow entries by changing numKeys
 	node.updateNumKeys(medianKeyIndex) // remove everything median and after
 
-	// -----------
-	// Print both nodes after the split
-	bufAfterOriginal := &bytes.Buffer{}
-	bufAfterNewLeaf := &bytes.Buffer{}
-	node.printNode(bufAfterOriginal, "", "    ")
-	intern.printNode(bufAfterNewLeaf, "", "    ")
-	fmt.Printf("Old node after split: \n%s", bufAfterOriginal.String())
-	fmt.Printf("New node after split: \n%s", bufAfterNewLeaf.String())
-	fmt.Printf("median Key: %v \n Median Key Index: %v \n", medianKey, medianKeyIndex)
-	// -----------
+	// // -----------
+	// // Print both nodes after the split
+	// bufAfterOriginal := &bytes.Buffer{}
+	// bufAfterNewLeaf := &bytes.Buffer{}
+	// node.printNode(bufAfterOriginal, "", "    ")
+	// intern.printNode(bufAfterNewLeaf, "", "    ")
+	// fmt.Printf("Old node after split: \n%s", bufAfterOriginal.String())
+	// fmt.Printf("New node after split: \n%s", bufAfterNewLeaf.String())
+	// fmt.Printf("median Key: %v \n Median Key Index: %v \n", medianKey, medianKeyIndex)
+	// // -----------
 
 	return Split{
 		isSplit: true,
