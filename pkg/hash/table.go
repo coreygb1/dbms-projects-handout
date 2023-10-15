@@ -6,6 +6,7 @@ import (
 	"io"
 	"math"
 	"sync"
+	"os"
 
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
 	utils "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/utils"
@@ -73,6 +74,7 @@ func (table *HashTable) GetPager() *pager.Pager {
 func (table *HashTable) Find(key int64) (utils.Entry, error) {
 	// Hash the key.
 	hash := Hasher(key, table.depth)
+	fmt.Printf("hash is %v \n", hash)
 	if hash < 0 || int(hash) >= len(table.buckets) {
 		return nil, errors.New("not found")
 	}
@@ -81,6 +83,8 @@ func (table *HashTable) Find(key int64) (utils.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Bucket is: \n")
+	bucket.Print(os.Stdout)
 	defer bucket.page.Put()
 	// Find the entry.
 	entry, found := bucket.Find(key)
@@ -128,6 +132,9 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 			new_bucket.Insert(key, value)
             bucket.Delete(key)
 		}
+	}
+	if int(second_hash) > (len(table.buckets) - 1) {
+		return errors.New("PROBLEM FOUND")
 	}
 	table.buckets[second_hash] = new_bucket.page.GetPageNum()
 	return nil
