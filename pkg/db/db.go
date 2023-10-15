@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	btree "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/btree"
+	hash "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/hash"
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
 	utils "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/utils"
 )
@@ -102,11 +103,11 @@ func (db *Database) createTable(name string, indexType IndexType) (index Index, 
 		if err != nil {
 			return nil, err
 		}
-	// case HashIndexType:
-	// 	index, err = hash.OpenTable(path)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
+	case HashIndexType:
+		index, err = hash.OpenTable(path)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, errors.New("invalid index type")
 	}
@@ -128,13 +129,17 @@ func (db *Database) GetTable(name string) (index Index, err error) {
 	// Else, open from disk.
 	// NOTE: This is janky; assumes that if a .meta file exists, then it is a hash index,
 	// else, it is a btree index.
-	// if _, err := os.Stat(path + ".meta"); err == nil {
-	// 	index, err = hash.OpenTable(path)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// } else {
-	index, err = btree.OpenTable(path)
+	// --------
+	if _, err := os.Stat(path + ".meta"); err == nil { // 
+		index, err = hash.OpenTable(path) //
+		if err != nil { //
+			return nil, err //
+		} //
+	} else { //
+	// --------
+
+		index, err = btree.OpenTable(path) 
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -151,4 +156,34 @@ func (db *Database) GetTables() map[string]Index {
 // Returns the basepath of the database.
 func (db *Database) GetBasePath() string {
 	return db.basepath
+}
+
+func (db *Database) DeleteTable(tableName string) error {
+    // Check if the table exists in memory
+    _, existsInMemory := db.tables[tableName]
+    
+    // Check if the table exists on disk
+    path := filepath.Join(db.basepath, tableName)
+    _, err := os.Stat(path)
+    existsOnDisk := err == nil
+
+    // If the table doesn't exist in both memory and disk, return an error
+    if !existsInMemory && !existsOnDisk {
+        return errors.New("table does not exist")
+    }
+
+    // If the table exists in memory, delete it
+    if existsInMemory {
+        delete(db.tables, tableName)
+    }
+
+    // If the table exists on disk, delete the file
+    if existsOnDisk {
+        err := os.Remove(path)
+        if err != nil {
+            return errors.New("error deleting table file from disk")
+        }
+    }
+
+    return nil
 }

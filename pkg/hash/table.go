@@ -107,14 +107,15 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 	
 	// create new bucket and add to table
 	new_bucket, err := NewHashBucket(table.pager, bucket.depth)
-	bucket.page.Put()
 	if err != nil {
 		return err
 	}
 	table.buckets[hash + int64(len(table.buckets))] = new_bucket.page.GetPageNum()
+	defer new_bucket.page.Put()
 	
 	// redistribute keys between buckets
-	for i := bucket.numKeys - 1; i >= 0; i-- {
+	MaxIndex = bucket.numKeys - 1
+	for i := MaxIndex; i >= 0; i-- {
 		hash := Hasher(bucket.getKeyAt(i), table.depth)
 		bucket_destination, err := table.GetBucket(hash)
 		if err != nil {
@@ -127,7 +128,7 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 		
 		if bucket_destination != bucket {
 			entry := HashEntry{key: bucket.getKeyAt(i), value: bucket.getValueAt(i)}
-			new_bucket.modifyEntry(i + 1, entry)
+			new_bucket.modifyEntry(new_bucket.numKeys, entry)
 			new_bucket.updateNumKeys(new_bucket.numKeys + 1)
 			bucket.Delete(bucket.getKeyAt(i))
 			bucket.updateNumKeys(bucket.numKeys - 1)
@@ -177,7 +178,7 @@ func (table *HashTable) Delete(key int64) error {
 }
 
 // Select all entries in this table.
-func (table *HashTable) Select() ([]utils.Entry, error) {
+func (table *HashTable) Select() ([]utils.Entry, error) {	
 	index, err := OpenTable(table.pager.GetFileName())
 	if err != nil {
 		return nil, err
