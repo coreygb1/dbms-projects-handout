@@ -128,7 +128,14 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 		}
 	}
 	if new_bucket.numKeys == 0 {
-		fmt.Printf("PROBLEM FOUND")
+		key := bucket.getKeyAt(0)
+        value := bucket.getValueAt(0)
+		new_bucket.Insert(key, value)
+		bucket.Delete(key)
+		newBucketPosition := (hash << 1) | 1
+		table.buckets[newBucketPosition] = new_bucket.page.GetPageNum()
+	} else {
+		table.buckets[second_hash] = new_bucket.page.GetPageNum()
 	}
 	table.buckets[second_hash] = new_bucket.page.GetPageNum()
 	return nil
