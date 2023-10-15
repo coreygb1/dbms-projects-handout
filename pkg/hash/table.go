@@ -6,7 +6,6 @@ import (
 	"io"
 	"math"
 	"sync"
-	"os"
 
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
 	utils "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/utils"
@@ -82,8 +81,6 @@ func (table *HashTable) Find(key int64) (utils.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Bucket is: \n")
-	bucket.Print(os.Stdout)
 	defer bucket.page.Put()
 	// Find the entry.
 	entry, found := bucket.Find(key)
@@ -102,8 +99,6 @@ func (table *HashTable) ExtendTable() {
 // Split the given bucket into two, extending the table if necessary.
 func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 	// add to local depth, extending global depth if necessary
-	// fmt.Println("Before split, bucket contents: \n")
-	// bucket.Print(os.Stdout)
 	bucket.updateDepth(bucket.depth + 1)
 	
 	// create new bucket and add to table
@@ -133,7 +128,7 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 		}
 	}
 	if new_bucket.numKeys == 0 {
-		return errors.New("PROBLEM FOUND")
+		fmt.Printf("PROBLEM FOUND")
 	}
 	table.buckets[second_hash] = new_bucket.page.GetPageNum()
 	return nil
