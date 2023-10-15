@@ -99,38 +99,43 @@ func (table *HashTable) ExtendTable() {
 // Split the given bucket into two, extending the table if necessary.
 func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 	// add to local depth, extending global depth if necessary
+	// fmt.Println("Before split, bucket contents: \n")
+	// bucket.Print(os.Stdout)
 	bucket.updateDepth(bucket.depth + 1)
-	if bucket.depth > table.depth {
-		table.depth ++
-		table.ExtendTable()
-	}
 	
 	// create new bucket and add to table
 	new_bucket, err := NewHashBucket(table.pager, bucket.depth)
 	if err != nil {
 		return err
 	}
-	table.buckets[hash + int64(len(table.buckets))] = new_bucket.page.GetPageNum()
 	defer new_bucket.page.Put()
+
+	if bucket.depth > table.depth {
+		table.ExtendTable()
+	} else {
+	}
 	
 	// redistribute keys between buckets
 	MaxIndex := bucket.numKeys - 1
+	second_hash := hash
 	for i := MaxIndex; i >= 0; i-- {
-		hash := Hasher(bucket.getKeyAt(i), table.depth)
-		bucket_destination, err := table.GetBucket(hash)
-		if err != nil {
-			return err
-		}
-
-		if bucket_destination != new_bucket && bucket_destination != bucket {
-			return errors.New("this code has an issue")
-		}
+		key := bucket.getKeyAt(i)
+        value := bucket.getValueAt(i)
 		
-		if bucket_destination != bucket {
-			new_bucket.Insert(bucket.getKeyAt(i), bucket.getValueAt(i))
-			bucket.Delete(bucket.getKeyAt(i))
+		newHash := Hasher(key, table.depth)
+
+		if newHash != hash {
+			second_hash = newHash
+			new_bucket.Insert(key, value)
+            bucket.Delete(key)
 		}
 	}
+	table.buckets[second_hash] = new_bucket.page.GetPageNum()
+
+	// fmt.Println("\n After split, bucket contents: \n")
+	// bucket.Print(os.Stdout)
+	// fmt.Println("\n After split, new bucket contents: \n")
+	// new_bucket.Print(os.Stdout)
 	return nil
 }
 
@@ -189,27 +194,6 @@ func (table *HashTable) Select() ([]utils.Entry, error) {
 		slice = append(slice, entries...)
 	}
 	return slice, nil
-	// index, err := OpenTable(table.pager.GetFileName())
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// cursorInt, err := index.TableStart()
-    // if err != nil {
-    //     return nil, err
-    // }
-    // cursor, _ := cursorInt.(*HashCursor)
-
-    // slice := make([]utils.Entry, 0)
-	// at_end := false
-	// for at_end != true {
-	// 	entry, err :=  cursor.GetEntry()
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	slice = append(slice, entry)
-	// 	at_end = cursor.StepForward()
-	// }
-	// return slice, nil
 }
 
 // Print out each bucket.
