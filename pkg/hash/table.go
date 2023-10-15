@@ -92,18 +92,66 @@ func (table *HashTable) Find(key int64) (utils.Entry, error) {
 
 // ExtendTable increases the global depth of the table by 1.
 func (table *HashTable) ExtendTable() {
-	table.depth = table.depth + 1
+	table.depth = table.GetDepth() + 1
 	table.buckets = append(table.buckets, table.buckets...)
 }
 
 // Split the given bucket into two, extending the table if necessary.
 func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
-	panic("function not yet implemented")
+	// add to local depth, extending global depth if necessary
+	bucket.updateDepth(bucket.depth + 1)
+	if bucket.depth > table.depth {
+		table.depth ++
+		table.ExtendTable()
+	}
+	
+	// create new bucket and add to table
+	new_bucket, err := NewHashBucket(table.pager, bucket.depth)
+	bucket.page.Put()
+	if err != nil {
+		return err
+	}
+	table.buckets[hash + int64(len(table.buckets))] = new_bucket.page.GetPageNum()
+	
+	// redistribute keys between buckets
+	for i := bucket.numKeys - 1; i >= 0; i-- {
+		hash := Hasher(bucket.getKeyAt(i), table.depth)
+		bucket_destination, err := table.GetBucket(hash)
+		if err != nil {
+			return err
+		}
+
+		if bucket_destination != new_bucket && bucket_destination != bucket {
+			return errors.New("this code has an issue")
+		}
+		
+		if bucket_destination != bucket {
+			entry := HashEntry{key: bucket.getKeyAt(i), value: bucket.getValueAt(i)}
+			new_bucket.modifyEntry(i + 1, entry)
+			new_bucket.updateNumKeys(new_bucket.numKeys + 1)
+			bucket.Delete(bucket.getKeyAt(i))
+			bucket.updateNumKeys(bucket.numKeys - 1)
+		}
+	}
+	return nil
 }
 
 // Inserts the given key-value pair, splits if necessary.
 func (table *HashTable) Insert(key int64, value int64) error {
-	panic("function not yet implemented")
+	hash := Hasher(key, table.depth)
+	bucket, err := table.GetBucket(hash)
+	if err != nil {
+		return err
+	}
+	defer bucket.page.Put()
+	should_split, err := bucket.Insert(key, value)
+	if err != nil {
+		return err
+	}
+	if should_split {
+		table.Split(bucket, hash)
+	}
+	return nil
 }
 
 // Update the given key-value pair.
@@ -130,7 +178,27 @@ func (table *HashTable) Delete(key int64) error {
 
 // Select all entries in this table.
 func (table *HashTable) Select() ([]utils.Entry, error) {
-	panic("function not yet implemented")
+	index, err := OpenTable(table.pager.GetFileName())
+	if err != nil {
+		return nil, err
+	}
+	cursorInt, err := index.TableStart()
+    if err != nil {
+        return nil, err
+    }
+    cursor, _ := cursorInt.(*HashCursor)
+
+    slice := make([]utils.Entry, 0)
+	at_end := false
+	for at_end != true {
+		entry, err :=  cursor.GetEntry()
+		if err != nil {
+			return nil, err
+		}
+		slice = append(slice, entry)
+		at_end = cursor.StepForward()
+	}
+	return slice, nil
 }
 
 // Print out each bucket.

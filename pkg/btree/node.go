@@ -302,18 +302,7 @@ func (node *InternalNode) split() Split {
 	intern.updatePNAt(count+1, node.getPNAt(node.numKeys))
 	
 	// "delete" old node overflow entries by changing numKeys
-	node.updateNumKeys(medianKeyIndex) // remove everything median and after
-
-	// // -----------
-	// // Print both nodes after the split
-	// bufAfterOriginal := &bytes.Buffer{}
-	// bufAfterNewLeaf := &bytes.Buffer{}
-	// node.printNode(bufAfterOriginal, "", "    ")
-	// intern.printNode(bufAfterNewLeaf, "", "    ")
-	// fmt.Printf("Old node after split: \n%s", bufAfterOriginal.String())
-	// fmt.Printf("New node after split: \n%s", bufAfterNewLeaf.String())
-	// fmt.Printf("median Key: %v \n Median Key Index: %v \n", medianKey, medianKeyIndex)
-	// // -----------
+	node.updateNumKeys(medianKeyIndex) 
 
 	return Split{
 		isSplit: true,
