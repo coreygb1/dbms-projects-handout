@@ -117,7 +117,7 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 	
 	// redistribute keys between buckets
 	MaxIndex := bucket.numKeys - 1
-	second_hash := hash
+	// second_hash := hash
 	for i := MaxIndex; i >= 0; i-- {
 		key := bucket.getKeyAt(i)
         value := bucket.getValueAt(i)
@@ -125,12 +125,17 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 		newHash := Hasher(key, table.depth)
 
 		if newHash != hash {
-			second_hash = newHash
+			// second_hash = newHash
 			new_bucket.Insert(key, value)
             bucket.Delete(key)
 		}
 	}
-	table.buckets[second_hash] = new_bucket.page.GetPageNum()
+	originalBucketPosition := hash << 1
+	newBucketPosition := (hash << 1) | 1
+	table.buckets[originalBucketPosition] = bucket.page.GetPageNum()
+	table.buckets[newBucketPosition] = new_bucket.page.GetPageNum()
+	defer bucket.page.Put()
+	// table.buckets[second_hash] = new_bucket.page.GetPageNum()
 
 	// fmt.Println("\n After split, bucket contents: \n")
 	// bucket.Print(os.Stdout)
