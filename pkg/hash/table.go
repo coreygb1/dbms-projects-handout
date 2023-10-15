@@ -114,7 +114,7 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 	defer new_bucket.page.Put()
 	
 	// redistribute keys between buckets
-	MaxIndex = bucket.numKeys - 1
+	MaxIndex := bucket.numKeys - 1
 	for i := MaxIndex; i >= 0; i-- {
 		hash := Hasher(bucket.getKeyAt(i), table.depth)
 		bucket_destination, err := table.GetBucket(hash)
@@ -179,6 +179,9 @@ func (table *HashTable) Delete(key int64) error {
 
 // Select all entries in this table.
 func (table *HashTable) Select() ([]utils.Entry, error) {	
+	// for i := 0; i <=
+	
+	
 	index, err := OpenTable(table.pager.GetFileName())
 	if err != nil {
 		return nil, err
