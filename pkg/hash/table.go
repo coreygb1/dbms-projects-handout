@@ -112,12 +112,11 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 
 	if bucket.depth > table.depth {
 		table.ExtendTable()
-	} else {
 	}
 	
 	// redistribute keys between buckets
 	MaxIndex := bucket.numKeys - 1
-	// second_hash := hash
+	second_hash := hash
 	for i := MaxIndex; i >= 0; i-- {
 		key := bucket.getKeyAt(i)
         value := bucket.getValueAt(i)
@@ -125,12 +124,25 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 		newHash := Hasher(key, table.depth)
 
 		if newHash != hash {
-			// second_hash = newHash
+			second_hash = newHash
 			new_bucket.Insert(key, value)
             bucket.Delete(key)
 		}
 	}
-	table.buckets[hash*2 + 1] = new_bucket.page.GetPageNum()
+
+	if bucket.depth > table.depth {
+		table.ExtendTable()
+		table.buckets[(hash << 1) | 1] = new_bucket.page.GetPageNum()
+	} else {
+		table.buckets[second_hash] = new_bucket.page.GetPageNum()
+	}
+	// if hash > int64(len(table.buckets)/2) {
+	// 	table.buckets[(hash-1)/2] = new_bucket.page.GetPageNum()
+	// } else {
+	// 	table.buckets[(hash*2 - 1] = new_bucket.page.GetPageNum()
+	// }
+	// newBucketPosition := (hash << 1) | 1
+	// table.buckets[(hash << 1) | 1] = new_bucket.page.GetPageNum()
 	// defer bucket.page.Put()
 	// table.buckets[second_hash] = new_bucket.page.GetPageNum()
 
