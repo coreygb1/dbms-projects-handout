@@ -134,7 +134,7 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 	newBucketPosition := (hash << 1) | 1
 	table.buckets[originalBucketPosition] = bucket.page.GetPageNum()
 	table.buckets[newBucketPosition] = new_bucket.page.GetPageNum()
-	defer bucket.page.Put()
+	// defer bucket.page.Put()
 	// table.buckets[second_hash] = new_bucket.page.GetPageNum()
 
 	// fmt.Println("\n After split, bucket contents: \n")
