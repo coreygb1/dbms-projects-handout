@@ -128,10 +128,8 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 		
 		if bucket_destination != bucket {
 			entry := HashEntry{key: bucket.getKeyAt(i), value: bucket.getValueAt(i)}
-			new_bucket.modifyEntry(new_bucket.numKeys, entry)
-			new_bucket.updateNumKeys(new_bucket.numKeys + 1)
+			new_bucket.Insert(entry)
 			bucket.Delete(bucket.getKeyAt(i))
-			bucket.updateNumKeys(bucket.numKeys - 1)
 		}
 	}
 	return nil
