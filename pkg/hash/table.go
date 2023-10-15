@@ -179,30 +179,40 @@ func (table *HashTable) Delete(key int64) error {
 
 // Select all entries in this table.
 func (table *HashTable) Select() ([]utils.Entry, error) {	
-	// for i := 0; i <=
-	
-	
-	index, err := OpenTable(table.pager.GetFileName())
-	if err != nil {
-		return nil, err
-	}
-	cursorInt, err := index.TableStart()
-    if err != nil {
-        return nil, err
-    }
-    cursor, _ := cursorInt.(*HashCursor)
-
-    slice := make([]utils.Entry, 0)
-	at_end := false
-	for at_end != true {
-		entry, err :=  cursor.GetEntry()
+	slice := make([]utils.Entry, 0)
+	for i := 0; i <= len(table.buckets) - 1; i ++ {
+		bucket, err := table.GetBucket(int64(i))
 		if err != nil {
 			return nil, err
 		}
-		slice = append(slice, entry)
-		at_end = cursor.StepForward()
+		entries, err := bucket.Select()
+		if err != nil {
+			return nil, err
+		}
+		slice = append(slice, entries...)
 	}
 	return slice, nil
+	// index, err := OpenTable(table.pager.GetFileName())
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// cursorInt, err := index.TableStart()
+    // if err != nil {
+    //     return nil, err
+    // }
+    // cursor, _ := cursorInt.(*HashCursor)
+
+    // slice := make([]utils.Entry, 0)
+	// at_end := false
+	// for at_end != true {
+	// 	entry, err :=  cursor.GetEntry()
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	slice = append(slice, entry)
+	// 	at_end = cursor.StepForward()
+	// }
+	// return slice, nil
 }
 
 // Print out each bucket.
