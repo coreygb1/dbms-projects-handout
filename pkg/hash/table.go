@@ -127,8 +127,7 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 		}
 		
 		if bucket_destination != bucket {
-			entry := HashEntry{key: bucket.getKeyAt(i), value: bucket.getValueAt(i)}
-			new_bucket.Insert(entry)
+			new_bucket.Insert(bucket.getKeyAt(i), bucket.getValueAt(i))
 			bucket.Delete(bucket.getKeyAt(i))
 		}
 	}
