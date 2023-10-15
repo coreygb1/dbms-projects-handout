@@ -75,7 +75,7 @@ func (table *HashTable) Find(key int64) (utils.Entry, error) {
 	// Hash the key.
 	hash := Hasher(key, table.depth)
 	fmt.Printf("hash is %v \n", hash)
-	if hash < 0 || int(hash) >= len(table.buckets) {
+	if hash <= 0 || int(hash) >= len(table.buckets) {
 		return nil, errors.New("not found")
 	}
 	// Get and lock the corresponding bucket.
