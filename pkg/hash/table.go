@@ -74,8 +74,7 @@ func (table *HashTable) GetPager() *pager.Pager {
 func (table *HashTable) Find(key int64) (utils.Entry, error) {
 	// Hash the key.
 	hash := Hasher(key, table.depth)
-	fmt.Printf("hash is %v \n", hash)
-	if hash <= 0 || int(hash) >= len(table.buckets) {
+	if hash < 0 || int(hash) >= len(table.buckets) {
 		return nil, errors.New("not found")
 	}
 	// Get and lock the corresponding bucket.
@@ -133,7 +132,7 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
             bucket.Delete(key)
 		}
 	}
-	if int(second_hash) > (len(table.buckets) - 1) {
+	if new_bucket.numKeys == 0 {
 		return errors.New("PROBLEM FOUND")
 	}
 	table.buckets[second_hash] = new_bucket.page.GetPageNum()
