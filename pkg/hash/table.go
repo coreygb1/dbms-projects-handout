@@ -130,7 +130,6 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
             bucket.Delete(key)
 		}
 	}
-	newBucketPosition := (hash << 1) | 1
 	table.buckets[hash*2 + 1] = new_bucket.page.GetPageNum()
 	// defer bucket.page.Put()
 	// table.buckets[second_hash] = new_bucket.page.GetPageNum()
