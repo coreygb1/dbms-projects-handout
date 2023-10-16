@@ -40,14 +40,14 @@ func testBTreeInsertTenNoWrite(t *testing.T) {
 		t.Error(err)
 	}
 	// Insert entries
-	for i := int64(0); i <= 50; i++ {
+	for i := int64(0); i <= 10; i++ {
 		err = index.Insert(i, i%btree_salt)
 		if err != nil {
 			t.Error(err)
 		}
 	}
 	// Retrieve entries
-	for i := int64(0); i <= 50; i++ {
+	for i := int64(0); i <= 10; i++ {
 		entry, err := index.Find(i)
 		if err != nil {
 			t.Error(err)

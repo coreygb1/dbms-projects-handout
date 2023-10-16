@@ -114,30 +114,35 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 	
 	// redistribute keys between buckets
 	MaxIndex := bucket.numKeys - 1
-	second_hash := hash
+	// second_hash := hash
 	for i := MaxIndex; i >= 0; i-- {
 		key := bucket.getKeyAt(i)
         value := bucket.getValueAt(i)
-		
-		newHash := Hasher(key, table.depth)
+		newHash := Hasher(key, bucket.depth) // bucket depth
 
 		if newHash != hash {
-			second_hash = newHash
+			// second_hash = newHash
 			new_bucket.Insert(key, value)
             bucket.Delete(key)
 		}
 	}
-	if new_bucket.numKeys == 0 {
-		key := bucket.getKeyAt(0)
-        value := bucket.getValueAt(0)
-		new_bucket.Insert(key, value)
-		bucket.Delete(key)
-		newBucketPosition := (hash << 1) | 1
-		table.buckets[newBucketPosition] = new_bucket.page.GetPageNum()
+	// table.buckets[second_hash] = new_bucket.page.GetPageNum()
+
+	var newBucketPosition int64 
+	bitToFlip := int64(1) << (bucket.depth - 1)
+	if hash&bitToFlip == 0 {
+		newBucketPosition = hash | bitToFlip
 	} else {
-		table.buckets[second_hash] = new_bucket.page.GetPageNum()
+		newBucketPosition = hash & ^bitToFlip
 	}
-	table.buckets[second_hash] = new_bucket.page.GetPageNum()
+	// fmt.Printf("old bucket position: %v \n", hash)
+	// fmt.Printf("new bucket position: %v \n", newBucketPosition)
+	table.buckets[newBucketPosition] = new_bucket.page.GetPageNum()
+	table.buckets[hash] = bucket.page.GetPageNum()
+
+	if new_bucket.numKeys == 0 {
+		table.Split(bucket, hash)
+	}
 	return nil
 }
 

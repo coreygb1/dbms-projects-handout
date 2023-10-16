@@ -62,14 +62,14 @@ func testHashInsertTenNoWrite(t *testing.T) {
 		t.Error(err)
 	}
 	// Insert entries
-	for i := int64(0); i <= 1000; i++ {
+	for i := int64(0); i <= 100000; i++ {
 		err = index.Insert(i, i%hash_salt)
 		if err != nil {
 			t.Error(err)
 		}
 	}
 	// Retrieve entries
-	for i := int64(0); i <= 1000; i++ {
+	for i := int64(0); i <= 100000; i++ {
 		entry, err := index.Find(i)
 		if err != nil {
 			t.Error(err)
