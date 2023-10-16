@@ -6,6 +6,7 @@ import (
 	"io"
 	"math"
 	"sync"
+	"os"
 
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
 	utils "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/utils"
@@ -99,6 +100,9 @@ func (table *HashTable) ExtendTable() {
 // Split the given bucket into two, extending the table if necessary.
 func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 	// add to local depth, extending global depth if necessary
+	// fmt.Printf("\n Old bucket before split:\n")
+    bucket.Print(os.Stdout) // Printing the old bucket's contents
+	
 	bucket.updateDepth(bucket.depth + 1)
 	
 	// create new bucket and add to table
@@ -137,11 +141,21 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 	}
 	// fmt.Printf("old bucket position: %v \n", hash)
 	// fmt.Printf("new bucket position: %v \n", newBucketPosition)
+	// fmt.Printf("Old bucket contents:\n")
+    // bucket.Print(os.Stdout) // Printing the old bucket's contents
+    // fmt.Printf("New bucket contents:\n")
+    // new_bucket.Print(os.Stdout) // Printing the new bucket's contents
+
 	table.buckets[newBucketPosition] = new_bucket.page.GetPageNum()
 	table.buckets[hash] = bucket.page.GetPageNum()
 
 	if new_bucket.numKeys == 0 {
+		// fmt.Printf("\n \n \n It will split \n")
 		table.Split(bucket, hash)
+	}
+	if bucket.numKeys == 0 {
+		// fmt.Printf("\n \n \n It will split \n")
+		table.Split(new_bucket, hash)
 	}
 	return nil
 }
