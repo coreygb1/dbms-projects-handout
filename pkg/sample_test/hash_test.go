@@ -44,11 +44,11 @@ func genRandomHashEntries(n int) (entries []hash_kv, answerKey map[int64]int64) 
 
 func TestHashTA(t *testing.T) {
 	t.Run("TestHashInsertTenNoWrite", testHashInsertTenNoWrite)
-	// t.Run("TestHashInsertTen", testHashInsertTen)
-	// t.Run("TestHashDeleteTenNoWrite", testHashDeleteTenNoWrite)
-	// t.Run("TestHashDeleteTen", testHashDeleteTen)
-	// t.Run("TestHashUpdateTenNoWrite", testHashUpdateTenNoWrite)
-	// t.Run("TestHashUpdateTen", testHashUpdateTen)
+	t.Run("TestHashInsertTen", testHashInsertTen)
+	t.Run("TestHashDeleteTenNoWrite", testHashDeleteTenNoWrite)
+	t.Run("TestHashDeleteTen", testHashDeleteTen)
+	t.Run("TestHashUpdateTenNoWrite", testHashUpdateTenNoWrite)
+	t.Run("TestHashUpdateTen", testHashUpdateTen)
 }
 
 func testHashInsertTenNoWrite(t *testing.T) {
@@ -62,28 +62,28 @@ func testHashInsertTenNoWrite(t *testing.T) {
 		t.Error(err)
 	}
 	// Insert entries
-	for i := int64(0); i <= 100; i++ {
+	for i := int64(0); i <= 10000; i++ {
 		err = index.Insert(i, i%hash_salt)
 		if err != nil {
 			t.Error(err)
 		}
 	}
-	// // Retrieve entries
-	// for i := int64(0); i <= 100; i++ {
-	// 	entry, err := index.Find(i)
-	// 	if err != nil {
-	// 		t.Error(err)
-	// 	}
-	// 	if entry == nil {
-	// 		t.Error("Inserted entry could not be found")
-	// 	}
-	// 	if entry.GetKey() != i {
-	// 		t.Error("Entry with wrong entry was found")
-	// 	}
-	// 	if entry.GetValue() != i%hash_salt {
-	// 		t.Error("Entry found has the wrong value")
-	// 	}
-	// }
+	// Retrieve entries
+	for i := int64(0); i <= 10000; i++ {
+		entry, err := index.Find(i)
+		if err != nil {
+			t.Error(err)
+		}
+		if entry == nil {
+			t.Error("Inserted entry could not be found")
+		}
+		if entry.GetKey() != i {
+			t.Error("Entry with wrong entry was found")
+		}
+		if entry.GetValue() != i%hash_salt {
+			t.Error("Entry found has the wrong value")
+		}
+	}
 	index.Close()
 }
 
