@@ -60,7 +60,7 @@ func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 func (node *LeafNode) delete(key int64) {
 	needNodeIndex := node.search(key) // Search the key
 	// Case if the key is not in the node on the last one
-	if needNodeIndex >= node.numKeys && node.getKeyAt(needNodeIndex) != key {
+	if needNodeIndex >= node.numKeys || node.getKeyAt(needNodeIndex) != key {
 		// Not in here!!
 		return
 	}
