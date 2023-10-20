@@ -83,7 +83,7 @@ func (table *HashTable) Find(key int64) (utils.Entry, error) {
 	}
 	defer bucket.page.Put()
 	// Find the entry.
-	entry, found := bucket.Find(key)
+	entry, _ := bucket.Find(key)
 	return entry, nil
 }
 
