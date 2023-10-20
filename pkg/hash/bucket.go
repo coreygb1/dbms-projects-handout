@@ -105,6 +105,11 @@ func (bucket *HashBucket) Select() (entries []utils.Entry, err error) {
 	return entries, nil
 }
 
+// Select all entries in this bucket.
+func (bucket *HashBucket) GetEntry(index int64) HashEntry {
+	return bucket.getEntry(index)
+}
+
 // Pretty-print this bucket.
 func (bucket *HashBucket) Print(w io.Writer) {
 	io.WriteString(w, fmt.Sprintf("bucket depth: %d\n", bucket.depth))
@@ -113,6 +118,10 @@ func (bucket *HashBucket) Print(w io.Writer) {
 		bucket.getEntry(i).Print(w)
 	}
 	io.WriteString(w, "\n")
+}
+
+func (bucket *HashBucket) GetNumKeys() (numKeys int64) {
+	return bucket.numKeys
 }
 
 // [CONCURRENCY] Grab a write lock on the hash table index

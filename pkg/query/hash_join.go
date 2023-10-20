@@ -40,8 +40,30 @@ func buildHashIndex(
 	if err != nil {
 		return nil, "", err
 	}
-	// Build the hash index.
-	panic("function not yet implemented")
+	// start table and get first entry
+	cursor, err := sourceTable.TableStart()
+	if err != nil {
+		return nil, "", err
+	}
+
+	entry, err := cursor.GetEntry()
+	if err != nil {
+		return nil, "", err
+	}
+	
+	endBool := cursor.IsEnd()
+	for !endBool {
+		if useKey {
+			err = tempIndex.Insert(entry.GetKey(), entry.GetValue())
+		} else {
+			err = tempIndex.Insert(entry.GetValue(), entry.GetKey())
+		}
+		if err != nil {
+			return nil, "", err
+		}
+		endBool = cursor.StepForward()
+	}
+	return tempIndex, dbName, nil
 }
 
 // sendResult attempts to send a single join result to the resultsChan channel as long as the errgroup hasn't been cancelled.
@@ -70,7 +92,30 @@ func probeBuckets(
 	defer lBucket.GetPage().Put()
 	defer rBucket.GetPage().Put()
 	// Probe buckets.
-	panic("function not yet implemented")
+	for i := int64(0); i < lBucket.GetNumKeys(); i++ {
+		left_entry := lBucket.GetEntry(i)
+		right_entry, match := rBucket.Find(left_entry.GetKey())
+		var return_left hash.HashEntry
+		var return_right hash.HashEntry
+		if match {
+			if !joinOnLeftKey {
+				return_left.SetKey(left_entry.GetValue())
+				return_left.SetValue(left_entry.GetKey())
+			} else {
+				return_left.SetKey(left_entry.GetKey())
+				return_left.SetValue(left_entry.GetValue())
+			}
+			if !joinOnLeftKey {
+				return_right.SetKey(right_entry.GetValue())
+				return_right.SetValue(right_entry.GetKey())
+			} else {
+				return_right.SetKey(right_entry.GetKey())
+				return_right.SetValue(right_entry.GetValue())
+			}
+			sendResult(ctx, resultsChan, EntryPair{l: return_left, r: return_right})
+		}
+	}
+	return nil
 }
 
 // Join leftTable on rightTable using Grace Hash Join.

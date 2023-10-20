@@ -23,7 +23,9 @@ func (table *HashIndex) TableStart() (utils.Cursor, error) {
 	}
 	defer curPage.Put()
 	cursor.curBucket = pageToBucket(curPage)
-	cursor.isEnd = (cursor.curBucket.numKeys == 0)
+	if cursor.curBucket.numKeys == 0 {
+        cursor.isEnd = cursor.StepForward()
+    }
 	return &cursor, nil
 }
 

@@ -101,11 +101,14 @@ func (table *HashTable) ExtendTable() {
 	table.buckets = append(table.buckets, table.buckets...)
 }
 
+
 // Split the given bucket into two, extending the table if necessary.
 func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 	// add to local depth, extending global depth if necessary
-	fmt.Printf("\n Old bucket before split:\n")
+	// fmt.Printf("\n Old bucket before split:\n")
     bucket.Print(os.Stdout) // Printing the old bucket's contents
+	
+	bucket.updateDepth(bucket.depth + 1)
 	
 	// create new bucket and add to table
 	new_bucket, err := NewHashBucket(table.pager, bucket.depth)
@@ -114,15 +117,10 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 	}
 	defer new_bucket.page.Put()
 
-	bucket.updateDepth(bucket.depth + 1)
-	new_bucket.depth = bucket.depth
-
 	if bucket.depth > table.depth {
 		table.ExtendTable()
-		fmt.Printf("\n EXTEND TABLE \n")
 	}
 	
-	update_size := int64(math.Pow(2, float64(bucket.depth)))
 	// redistribute keys between buckets
 	MaxIndex := bucket.numKeys - 1
 	// second_hash := hash
@@ -130,55 +128,121 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 		key := bucket.getKeyAt(i)
         value := bucket.getValueAt(i)
 		newHash := Hasher(key, bucket.depth) // bucket depth
-		fmt.Printf("KV pair: %v, %v \n", key, value)
-		fmt.Printf("hash: %v ", hash)
-		fmt.Printf("New hash: %v \n", newHash)
-		if (newHash % update_size) - update_size/2 >= 0 {
+
+		if newHash != hash {
 			// second_hash = newHash
 			new_bucket.Insert(key, value)
             bucket.Delete(key)
 		}
 	}
-	
-	table_size := int64(math.Pow(2, float64(table.depth))) - 1
-	starting_num := hash % update_size
-	if starting_num - update_size/2 >= 0 {
-		starting_num -= update_size/2
-	}
-
-	fmt.Printf("update size: %v \n", update_size)
-	fmt.Printf("table size: %v \n", table_size)
-	fmt.Printf("starting num: %v \n", starting_num)
-	for i:= starting_num; i <= table_size; i += update_size {
-		fmt.Printf("adding old bucket to table at %v \n", i)
-		table.buckets[i] = bucket.page.GetPageNum()
-		fmt.Printf("adding new bucket to table at %v \n", i + update_size/2)
-		table.buckets[i + update_size/2] = new_bucket.page.GetPageNum()
-	}
-	
 	// table.buckets[second_hash] = new_bucket.page.GetPageNum()
-	fmt.Printf("Old bucket contents:\n")
-    bucket.Print(os.Stdout) // Printing the old bucket's contents
-    fmt.Printf("New bucket contents:\n")
-    new_bucket.Print(os.Stdout) // Printing the new bucket's contents
-	fmt.Printf("size of table: %v \n", len(table.buckets))
-	fmt.Printf("table depth: %v \n", table.depth)
+
+	var newBucketPosition int64 
+	bitToFlip := int64(1) << (bucket.depth - 1)
+	if hash&bitToFlip == 0 {
+		newBucketPosition = hash | bitToFlip
+	} else {
+		newBucketPosition = hash & ^bitToFlip
+	}
 	// fmt.Printf("old bucket position: %v \n", hash)
-	// fmt.Printf("(2^(bucket.depth))/2: %v \n", math.Pow(2, float64(bucket.depth)) / 2)
-	// fmt.Printf("new bucket position: %v \n", new_hash)
-	
-	
+	// fmt.Printf("new bucket position: %v \n", newBucketPosition)
+	// fmt.Printf("Old bucket contents:\n")
+    // bucket.Print(os.Stdout) // Printing the old bucket's contents
+    // fmt.Printf("New bucket contents:\n")
+    // new_bucket.Print(os.Stdout) // Printing the new bucket's contents
+
+	table.buckets[newBucketPosition] = new_bucket.page.GetPageNum()
+	table.buckets[hash] = bucket.page.GetPageNum()
 
 	if new_bucket.numKeys == 0 {
-		fmt.Printf("\n \n \n Split old bucket \n")
-		table.Split(bucket, starting_num)
+		// fmt.Printf("\n \n \n It will split \n")
+		table.Split(bucket, hash)
 	}
 	if bucket.numKeys == 0 {
-		fmt.Printf("\n \n \nSplit new bucket \n")
-		table.Split(new_bucket, (starting_num + update_size/2))
+		// fmt.Printf("\n \n \n It will split \n")
+		table.Split(new_bucket, hash)
 	}
 	return nil
 }
+
+// // Split the given bucket into two, extending the table if necessary.
+// func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
+// 	// add to local depth, extending global depth if necessary
+// 	fmt.Printf("\n Old bucket before split:\n")
+//     bucket.Print(os.Stdout) // Printing the old bucket's contents
+	
+// 	// create new bucket and add to table
+// 	new_bucket, err := NewHashBucket(table.pager, bucket.depth)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer new_bucket.page.Put()
+
+// 	bucket.updateDepth(bucket.depth + 1)
+// 	new_bucket.depth = bucket.depth
+
+// 	if bucket.depth > table.depth {
+// 		table.ExtendTable()
+// 		fmt.Printf("\n EXTEND TABLE \n")
+// 	}
+	
+// 	update_size := int64(math.Pow(2, float64(bucket.depth)))
+// 	// redistribute keys between buckets
+// 	MaxIndex := bucket.numKeys - 1
+// 	// second_hash := hash
+// 	for i := MaxIndex; i >= 0; i-- {
+// 		key := bucket.getKeyAt(i)
+//         value := bucket.getValueAt(i)
+// 		newHash := Hasher(key, bucket.depth) // bucket depth
+// 		fmt.Printf("KV pair: %v, %v \n", key, value)
+// 		fmt.Printf("hash: %v ", hash)
+// 		fmt.Printf("New hash: %v \n", newHash)
+// 		if (newHash % update_size) - update_size/2 >= 0 {
+// 			// second_hash = newHash
+// 			new_bucket.Insert(key, value)
+//             bucket.Delete(key)
+// 		}
+// 	}
+	
+// 	table_size := int64(math.Pow(2, float64(table.depth))) - 1
+// 	starting_num := hash % update_size
+// 	if starting_num - update_size/2 >= 0 {
+// 		starting_num -= update_size/2
+// 	}
+
+// 	fmt.Printf("update size: %v \n", update_size)
+// 	fmt.Printf("table size: %v \n", table_size)
+// 	fmt.Printf("starting num: %v \n", starting_num)
+// 	for i:= starting_num; i <= table_size; i += update_size {
+// 		fmt.Printf("adding old bucket to table at %v \n", i)
+// 		table.buckets[i] = bucket.page.GetPageNum()
+// 		fmt.Printf("adding new bucket to table at %v \n", i + update_size/2)
+// 		table.buckets[i + update_size/2] = new_bucket.page.GetPageNum()
+// 	}
+	
+// 	// table.buckets[second_hash] = new_bucket.page.GetPageNum()
+// 	fmt.Printf("Old bucket contents:\n")
+//     bucket.Print(os.Stdout) // Printing the old bucket's contents
+//     fmt.Printf("New bucket contents:\n")
+//     new_bucket.Print(os.Stdout) // Printing the new bucket's contents
+// 	fmt.Printf("size of table: %v \n", len(table.buckets))
+// 	fmt.Printf("table depth: %v \n", table.depth)
+// 	// fmt.Printf("old bucket position: %v \n", hash)
+// 	// fmt.Printf("(2^(bucket.depth))/2: %v \n", math.Pow(2, float64(bucket.depth)) / 2)
+// 	// fmt.Printf("new bucket position: %v \n", new_hash)
+	
+	
+
+// 	if new_bucket.numKeys == 0 {
+// 		fmt.Printf("\n \n \n Split old bucket \n")
+// 		table.Split(bucket, starting_num)
+// 	}
+// 	if bucket.numKeys == 0 {
+// 		fmt.Printf("\n \n \nSplit new bucket \n")
+// 		table.Split(new_bucket, (starting_num + update_size/2))
+// 	}
+// 	return nil
+// }
 
 // Inserts the given key-value pair, splits if necessary.
 func (table *HashTable) Insert(key int64, value int64) error {
