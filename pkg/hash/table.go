@@ -6,7 +6,6 @@ import (
 	"io"
 	"math"
 	"sync"
-	"os"
 
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
 	utils "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/utils"
@@ -85,13 +84,6 @@ func (table *HashTable) Find(key int64) (utils.Entry, error) {
 	defer bucket.page.Put()
 	// Find the entry.
 	entry, found := bucket.Find(key)
-	if !found {
-		fmt.Printf("Not found bucket contents:\n")
-    	bucket.Print(os.Stdout) // Printing the old bucket's contents
-		fmt.Printf(" \n Looking for key: %v \n", key)
-		fmt.Printf(" Hash: %v \n", hash)
-		bucket.Print(os.Stdout)
-	}
 	return entry, nil
 }
 
@@ -105,9 +97,8 @@ func (table *HashTable) ExtendTable() {
 // Split the given bucket into two, extending the table if necessary.
 func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 	// add to local depth, extending global depth if necessary
-	// fmt.Printf("\n Old bucket before split:\n")
-    bucket.Print(os.Stdout) // Printing the old bucket's contents
-	
+	// fmt.Println("Before split, bucket contents: \n")
+	// bucket.Print(os.Stdout)
 	bucket.updateDepth(bucket.depth + 1)
 	
 	// create new bucket and add to table
@@ -123,45 +114,20 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 	
 	// redistribute keys between buckets
 	MaxIndex := bucket.numKeys - 1
-	// second_hash := hash
+	second_hash := hash
 	for i := MaxIndex; i >= 0; i-- {
 		key := bucket.getKeyAt(i)
         value := bucket.getValueAt(i)
-		newHash := Hasher(key, bucket.depth) // bucket depth
+		
+		newHash := Hasher(key, table.depth)
 
 		if newHash != hash {
-			// second_hash = newHash
+			second_hash = newHash
 			new_bucket.Insert(key, value)
             bucket.Delete(key)
 		}
 	}
-	// table.buckets[second_hash] = new_bucket.page.GetPageNum()
-
-	var newBucketPosition int64 
-	bitToFlip := int64(1) << (bucket.depth - 1)
-	if hash&bitToFlip == 0 {
-		newBucketPosition = hash | bitToFlip
-	} else {
-		newBucketPosition = hash & ^bitToFlip
-	}
-	// fmt.Printf("old bucket position: %v \n", hash)
-	// fmt.Printf("new bucket position: %v \n", newBucketPosition)
-	// fmt.Printf("Old bucket contents:\n")
-    // bucket.Print(os.Stdout) // Printing the old bucket's contents
-    // fmt.Printf("New bucket contents:\n")
-    // new_bucket.Print(os.Stdout) // Printing the new bucket's contents
-
-	table.buckets[newBucketPosition] = new_bucket.page.GetPageNum()
-	table.buckets[hash] = bucket.page.GetPageNum()
-
-	if new_bucket.numKeys == 0 {
-		// fmt.Printf("\n \n \n It will split \n")
-		table.Split(bucket, hash)
-	}
-	if bucket.numKeys == 0 {
-		// fmt.Printf("\n \n \n It will split \n")
-		table.Split(new_bucket, hash)
-	}
+	table.buckets[second_hash] = new_bucket.page.GetPageNum()
 	return nil
 }
 
