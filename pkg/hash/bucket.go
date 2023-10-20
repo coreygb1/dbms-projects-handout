@@ -16,6 +16,14 @@ type HashBucket struct {
 	page    *pager.Page
 }
 
+func (bucket *HashBucket) GetNumKeys() int64 {
+	return bucket.numKeys
+}
+
+func (bucket *HashBucket) GetEntry(i int64) utils.Entry {
+	return bucket.getEntry(i)
+}
+
 // Construct a new HashBucket.
 func NewHashBucket(pager *pager.Pager, depth int64) (*HashBucket, error) {
 	newPN := pager.GetFreePN()
@@ -50,18 +58,11 @@ func (bucket *HashBucket) Find(key int64) (utils.Entry, bool) {
 
 // Inserts the given key-value pair, splits if necessary.
 func (bucket *HashBucket) Insert(key int64, value int64) (bool, error) {
-	if bucket.numKeys >= BUCKETSIZE {
-        return true, errors.New("bucket is full")
-    }
-	
-	entry := HashEntry {key: key, value: value}
-	bucket.modifyEntry(bucket.numKeys, entry)
+	/* SOLUTION {{{ */
+	bucket.modifyEntry(bucket.numKeys, HashEntry{key, value})
 	bucket.updateNumKeys(bucket.numKeys + 1)
-	if bucket.numKeys >= BUCKETSIZE {
-		return true, nil
-	} else { 
-		return false, nil 
-	}
+	return bucket.numKeys >= BUCKETSIZE, nil
+	/* SOLUTION }}} */
 }
 
 // Update the given key-value pair, should never split.
@@ -105,11 +106,6 @@ func (bucket *HashBucket) Select() (entries []utils.Entry, err error) {
 	return entries, nil
 }
 
-// Select all entries in this bucket.
-func (bucket *HashBucket) GetEntry(index int64) HashEntry {
-	return bucket.getEntry(index)
-}
-
 // Pretty-print this bucket.
 func (bucket *HashBucket) Print(w io.Writer) {
 	io.WriteString(w, fmt.Sprintf("bucket depth: %d\n", bucket.depth))
@@ -118,10 +114,6 @@ func (bucket *HashBucket) Print(w io.Writer) {
 		bucket.getEntry(i).Print(w)
 	}
 	io.WriteString(w, "\n")
-}
-
-func (bucket *HashBucket) GetNumKeys() (numKeys int64) {
-	return bucket.numKeys
 }
 
 // [CONCURRENCY] Grab a write lock on the hash table index

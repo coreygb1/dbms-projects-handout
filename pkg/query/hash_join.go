@@ -3,6 +3,7 @@ package query
 import (
 	"context"
 	"os"
+	"fmt"
 
 	db "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/db"
 	hash "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/hash"
@@ -63,6 +64,8 @@ func buildHashIndex(
 		}
 		endBool = cursor.StepForward()
 	}
+	fmt.Println("Hash Table: \n")
+	tempIndex.GetTable().Print(os.Stdout)
 	return tempIndex, dbName, nil
 }
 
@@ -95,9 +98,9 @@ func probeBuckets(
 	for i := int64(0); i < lBucket.GetNumKeys(); i++ {
 		left_entry := lBucket.GetEntry(i)
 		right_entry, match := rBucket.Find(left_entry.GetKey())
-		var return_left hash.HashEntry
-		var return_right hash.HashEntry
 		if match {
+			var return_left hash.HashEntry
+			var return_right hash.HashEntry
 			if !joinOnLeftKey {
 				return_left.SetKey(left_entry.GetValue())
 				return_left.SetValue(left_entry.GetKey())
@@ -105,7 +108,7 @@ func probeBuckets(
 				return_left.SetKey(left_entry.GetKey())
 				return_left.SetValue(left_entry.GetValue())
 			}
-			if !joinOnLeftKey {
+			if !joinOnRightKey {
 				return_right.SetKey(right_entry.GetValue())
 				return_right.SetValue(right_entry.GetKey())
 			} else {
