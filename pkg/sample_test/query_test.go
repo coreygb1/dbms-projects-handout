@@ -100,7 +100,7 @@ func testQuerySimple(t *testing.T) {
 
 	// Insert entries.
 	for i := int64(0); i < 10; i++ {
-		err = index1.Insert(i, i%query_salt)
+		err = index1.Insert(i, i)
 		if err != nil {
 			t.Error(err)
 		}

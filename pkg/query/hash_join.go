@@ -32,6 +32,8 @@ func buildHashIndex(
 	useKey bool,
 ) (tempIndex *hash.HashIndex, dbName string, err error) {
 	// Get a temporary db file.
+	fmt.Println("Source Table: \n")
+	sourceTable.Print(os.Stdout)
 	dbName, err = db.GetTempDB()
 	if err != nil {
 		return nil, "", err
@@ -47,13 +49,22 @@ func buildHashIndex(
 		return nil, "", err
 	}
 
-	entry, err := cursor.GetEntry()
 	if err != nil {
 		return nil, "", err
 	}
 	
-	endBool := cursor.IsEnd()
+	endBool := false
+	isEnd := cursor.IsEnd()
 	for !endBool {
+		for isEnd && !endBool {
+			endBool = cursor.StepForward()
+			isEnd = cursor.IsEnd()
+		}
+		if endBool {
+			break
+		}
+		entry, err := cursor.GetEntry()
+		fmt.Println("Entry: %v \n", entry)
 		if useKey {
 			err = tempIndex.Insert(entry.GetKey(), entry.GetValue())
 		} else {
@@ -63,6 +74,7 @@ func buildHashIndex(
 			return nil, "", err
 		}
 		endBool = cursor.StepForward()
+		isEnd = cursor.IsEnd()
 	}
 	fmt.Println("Hash Table: \n")
 	tempIndex.GetTable().Print(os.Stdout)

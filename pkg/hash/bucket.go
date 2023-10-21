@@ -16,14 +16,6 @@ type HashBucket struct {
 	page    *pager.Page
 }
 
-func (bucket *HashBucket) GetNumKeys() int64 {
-	return bucket.numKeys
-}
-
-func (bucket *HashBucket) GetEntry(i int64) utils.Entry {
-	return bucket.getEntry(i)
-}
-
 // Construct a new HashBucket.
 func NewHashBucket(pager *pager.Pager, depth int64) (*HashBucket, error) {
 	newPN := pager.GetFreePN()
@@ -44,6 +36,14 @@ func (bucket *HashBucket) GetDepth() int64 {
 // Get a bucket's page.
 func (bucket *HashBucket) GetPage() *pager.Page {
 	return bucket.page
+}
+
+func (bucket *HashBucket) GetEntry(i int64) utils.Entry {
+	return bucket.getEntry(i)
+}
+
+func (bucket *HashBucket) GetNumKeys() int64 {
+	return bucket.numKeys
 }
 
 // Finds the entry with the given key.
