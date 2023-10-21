@@ -109,10 +109,9 @@ func probeBuckets(
 	// Probe buckets.
 	for i := int64(0); i < lBucket.GetNumKeys(); i++ {
 		left_entry := lBucket.GetEntry(i)
-		right_entry, match := rBucket.Find(left_entry.GetKey())
+		right_entries, match := rBucket.FindAll(left_entry.GetKey())
 		if match {
 			var return_left hash.HashEntry
-			var return_right hash.HashEntry
 			if !joinOnLeftKey {
 				return_left.SetKey(left_entry.GetValue())
 				return_left.SetValue(left_entry.GetKey())
@@ -120,14 +119,18 @@ func probeBuckets(
 				return_left.SetKey(left_entry.GetKey())
 				return_left.SetValue(left_entry.GetValue())
 			}
-			if !joinOnRightKey {
-				return_right.SetKey(right_entry.GetValue())
-				return_right.SetValue(right_entry.GetKey())
-			} else {
-				return_right.SetKey(right_entry.GetKey())
-				return_right.SetValue(right_entry.GetValue())
+			var return_right hash.HashEntry
+			for i := 0; i < len(right_entries); i++ {
+				right_entry := right_entries[i].(hash.HashEntry)
+				if !joinOnRightKey {
+					return_right.SetKey(right_entry.GetValue())
+					return_right.SetValue(right_entry.GetKey())
+				} else {
+					return_right.SetKey(right_entry.GetKey())
+					return_right.SetValue(right_entry.GetValue())
+				}
+				sendResult(ctx, resultsChan, EntryPair{l: return_left, r: return_right})
 			}
-			sendResult(ctx, resultsChan, EntryPair{l: return_left, r: return_right})
 		}
 	}
 	return nil
