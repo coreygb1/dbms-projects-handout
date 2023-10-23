@@ -1,6 +1,11 @@
 package list
 
 import (
+	"errors"
+	"fmt"
+	"io"
+	"strings"
+
 	repl "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/repl"
 )
 

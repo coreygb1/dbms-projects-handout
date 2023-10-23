@@ -1,9 +1,12 @@
 package repl
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"strings"
 
 	uuid "github.com/google/uuid"
@@ -68,17 +71,17 @@ func (r *REPL) HelpString() string {
 // Run the REPL.
 func (r *REPL) Run(c net.Conn, clientId uuid.UUID, prompt string) {
 	// Get reader and writer; stdin and stdout if no conn.
-	// var reader io.Reader
-	// var writer io.Writer
-	// if c == nil {
-	// 	reader = os.Stdin
-	// 	writer = os.Stdout
-	// } else {
-	// 	reader = c
-	// 	writer = c
-	// }
-	// scanner := bufio.NewScanner((reader))
-	// replConfig := &REPLConfig{writer: writer, clientId: clientId}
+	var reader io.Reader
+	var writer io.Writer
+	if c == nil {
+		reader = os.Stdin
+		writer = os.Stdout
+	} else {
+		reader = c
+		writer = c
+	}
+	scanner := bufio.NewScanner((reader))
+	replConfig := &REPLConfig{writer: writer, clientId: clientId}
 	// Begin the repl loop!
 	panic("function not yet implemented")
 }
