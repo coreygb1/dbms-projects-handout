@@ -2,16 +2,18 @@ package btree
 
 import (
 	"errors"
+	"sync"
 
 	utils "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/utils"
 )
 
 // Cursors are an abstration to represent locations in a table.
 type BTreeCursor struct {
-	table   *BTreeIndex // The table that this cursor point to.
-	cellnum int64       // The cell number within a leaf node.
-	isEnd   bool        // Indicates that this cursor is at the end of a node.
-	curNode *LeafNode   // Current node.
+	table   *BTreeIndex  // The table that this cursor point to.
+	cellnum int64        // The cell number within a leaf node.
+	isEnd   bool         // Indicates that this cursor points beyond the table/at the end of the table.
+	curNode *LeafNode    // Current node.
+	mu      sync.RWMutex // Mutex for cursor
 }
 
 // TableStart returns a cursor pointing to the first entry of the table.
@@ -105,9 +107,11 @@ func (table *BTreeIndex) TableFindRange(startKey int64, endKey int64) ([]utils.E
 	panic("function not yet implemented")
 }
 
-// stepForward moves the cursor ahead by one entry.
+// stepForward moves the cursor ahead by one entry. Returns true at the end of the BTree.
 func (cursor *BTreeCursor) StepForward() (atEnd bool) {
 	// If the cursor is at the end of the node, go to the next node.
+	cursor.mu.Lock()
+	defer cursor.mu.Unlock()
 	if cursor.cellnum+1 >= cursor.curNode.numKeys {
 		// Get the next node's page number.
 		nextPN := cursor.curNode.rightSiblingPN
@@ -121,6 +125,8 @@ func (cursor *BTreeCursor) StepForward() (atEnd bool) {
 		}
 		defer nextPage.Put()
 		nextNode := pageToLeafNode(nextPage)
+		nextNode.page.WLock()
+		defer nextNode.unlock()
 		// Reinitialize the cursor.
 		cursor.cellnum = 0
 		cursor.curNode = nextNode
@@ -146,6 +152,8 @@ func (cursor *BTreeCursor) GetEntry() (utils.Entry, error) {
 	if cursor.isEnd {
 		return BTreeEntry{}, errors.New("getEntry: entry is non-existent")
 	}
+	cursor.curNode.page.WLock()
+	defer cursor.curNode.page.WUnlock()
 	entry := cursor.curNode.getEntry(cursor.cellnum)
 	return entry, nil
 }
