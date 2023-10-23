@@ -4,8 +4,8 @@ all: build
 
 build:
 	go build ./cmd/bumble
-	# go build ./cmd/bumble_client
-	# go build ./cmd/bumble_stress
+	go build ./cmd/bumble_client
+	go build ./cmd/bumble_stress
 
 clean:
 	rm -f bumble bumble_client bumble_stress

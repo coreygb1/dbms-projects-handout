@@ -1,12 +1,9 @@
 package repl
 
 import (
-	"bufio"
-	"errors"
 	"fmt"
 	"io"
 	"net"
-	"os"
 	"strings"
 
 	uuid "github.com/google/uuid"
@@ -36,12 +33,12 @@ func (replConfig *REPLConfig) GetAddr() uuid.UUID {
 
 // Construct an empty REPL.
 func NewRepl() *REPL {
-	panic("function not yet implemented");
+	panic("function not yet implemented")
 }
 
 // Combines a slice of REPLs.
 func CombineRepls(repls []*REPL) (*REPL, error) {
-	panic("function not yet implemented");
+	panic("function not yet implemented")
 }
 
 // Get commands.
@@ -56,7 +53,7 @@ func (r *REPL) GetHelp() map[string]string {
 
 // Add a command, along with its help string, to the set of commands.
 func (r *REPL) AddCommand(trigger string, action func(string, *REPLConfig) error, help string) {
-	panic("function not yet implemented");
+	panic("function not yet implemented")
 }
 
 // Return all REPL usage information as a string.
@@ -71,24 +68,24 @@ func (r *REPL) HelpString() string {
 // Run the REPL.
 func (r *REPL) Run(c net.Conn, clientId uuid.UUID, prompt string) {
 	// Get reader and writer; stdin and stdout if no conn.
-	var reader io.Reader
-	var writer io.Writer
-	if c == nil {
-		reader = os.Stdin
-		writer = os.Stdout
-	} else {
-		reader = c
-		writer = c
-	}
-	scanner := bufio.NewScanner((reader))
-	replConfig := &REPLConfig{writer: writer, clientId: clientId}
+	// var reader io.Reader
+	// var writer io.Writer
+	// if c == nil {
+	// 	reader = os.Stdin
+	// 	writer = os.Stdout
+	// } else {
+	// 	reader = c
+	// 	writer = c
+	// }
+	// scanner := bufio.NewScanner((reader))
+	// replConfig := &REPLConfig{writer: writer, clientId: clientId}
 	// Begin the repl loop!
-	panic("function not yet implemented");
+	panic("function not yet implemented")
 }
 
 // Run the REPL.
 func (r *REPL) RunChan(c chan string, clientId uuid.UUID, prompt string) {
-	panic("function not yet implemented");
+	panic("function not yet implemented")
 }
 
 // cleanInput preprocesses input to the db repl.
