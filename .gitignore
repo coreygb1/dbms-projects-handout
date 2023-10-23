@@ -26,6 +26,7 @@ __pycache__/
 # Generated files
 /bumble
 /bumble_client
+/bumble_stress
 /data/
 
 # OS generated files #
