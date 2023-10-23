@@ -110,8 +110,6 @@ func (table *BTreeIndex) TableFindRange(startKey int64, endKey int64) ([]utils.E
 // stepForward moves the cursor ahead by one entry. Returns true at the end of the BTree.
 func (cursor *BTreeCursor) StepForward() (atEnd bool) {
 	// If the cursor is at the end of the node, go to the next node.
-	cursor.mu.Lock()
-	defer cursor.mu.Unlock()
 	if cursor.cellnum+1 >= cursor.curNode.numKeys {
 		// Get the next node's page number.
 		nextPN := cursor.curNode.rightSiblingPN
@@ -125,8 +123,6 @@ func (cursor *BTreeCursor) StepForward() (atEnd bool) {
 		}
 		defer nextPage.Put()
 		nextNode := pageToLeafNode(nextPage)
-		nextNode.page.WLock()
-		defer nextNode.unlock()
 		// Reinitialize the cursor.
 		cursor.cellnum = 0
 		cursor.curNode = nextNode
