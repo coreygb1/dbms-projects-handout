@@ -84,7 +84,6 @@ func (table *HashTable) Find(key int64) (utils.Entry, error) {
 		table.RUnlock()
 		return nil, err
 	}
-	// bucket.RLock()
 	table.RUnlock()
 	defer bucket.page.Put()
 
@@ -120,7 +119,7 @@ func (table *HashTable) Update(key int64, value int64) error {
 	hash := Hasher(key, table.depth)
 	bucket, err := table.GetAndLockBucket(hash, WRITE_LOCK)
 	if err != nil {
-		table.WUnlock()
+		table.RUnlock()
 		return err
 	}
 	defer bucket.page.Put()
@@ -136,11 +135,10 @@ func (table *HashTable) Delete(key int64) error {
 	hash := Hasher(key, table.depth)
 	bucket, err := table.GetAndLockBucket(hash, WRITE_LOCK)
 	if err != nil {
-		table.WUnlock()
+		table.RUnlock()
 		return err
 	}
 	defer bucket.page.Put()
-	// bucket.WLock()
 	table.RUnlock()
 	defer bucket.WUnlock()
 	err2 := bucket.Delete(key)
