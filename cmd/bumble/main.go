@@ -11,14 +11,11 @@ import (
 
 	"github.com/csci1270-fall-2023/dbms-projects-handout/pkg/concurrency"
 	config "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/config"
+	db "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/db"
 	list "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/list"
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
+	"github.com/csci1270-fall-2023/dbms-projects-handout/pkg/query"
 	repl "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/repl"
-
-	db "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/db"
-	// query "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/query"
-	// concurrency "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/concurrency"
-	// recovery "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/recovery"
 
 	uuid "github.com/google/uuid"
 )
@@ -72,7 +69,6 @@ func startServer(repl *repl.REPL, tm *concurrency.TransactionManager, prompt str
 
 // Start the database.
 func main() {
-	// fmt.Printf("%d keys per internal, %d keys per leaf\n", btree.KEYS_PER_INTERNAL_NODE, btree.ENTRIES_PER_LEAF_NODE)
 	// Set up flags.
 	var promptFlag = flag.Bool("c", true, "use prompt?")
 	var projectFlag = flag.String("project", "", "choose project: [go,pager,db,query,concurrency,recovery] (required)")
@@ -136,10 +132,10 @@ func main() {
 		repls = append(repls, db.DatabaseRepl(database))
 
 	// [QUERY]
-	// case "query":
-	// 	server = false
-	// 	repls = append(repls, db.DatabaseRepl(database))
-	// 	repls = append(repls, query.QueryRepl(database))
+	case "query":
+		server = false
+		repls = append(repls, db.DatabaseRepl(database))
+		repls = append(repls, query.QueryRepl(database))
 
 	// [CONCURRENCY]
 	case "concurrency":
