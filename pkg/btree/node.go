@@ -84,18 +84,19 @@ func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 
 // delete removes a given tuple from the leaf node, if the given key exists.
 func (node *LeafNode) delete(key int64) {
-	needNodeIndex := node.search(key) // Search the key
-	// Case if the key is not in the node on the last one
-	if needNodeIndex >= node.numKeys || node.getKeyAt(needNodeIndex) != key {
-		// Not in here!!
+	// Find entry.
+	node.unlockParent(true)
+	defer node.unlock()
+	deletePos := node.search(key)
+	if deletePos >= node.numKeys || node.getKeyAt(deletePos) != key {
+		// Thank you Mario! But our key is in another castle!
 		return
 	}
-	// Shift the keys and values to the left
-	for i := needNodeIndex; i < node.numKeys-1; i++ {
+	// Shift entries to the left.
+	for i := deletePos; i < node.numKeys-1; i++ {
 		node.updateKeyAt(i, node.getKeyAt(i+1))
 		node.updateValueAt(i, node.getValueAt(i+1))
 	}
-	// Update the number of keys
 	node.updateNumKeys(node.numKeys - 1)
 }
 
@@ -152,6 +153,9 @@ func (node *LeafNode) split() Split {
 
 // get returns the value associated with a given key from the leaf node.
 func (node *LeafNode) get(key int64) (value int64, found bool) {
+	// Unlock parents, eventually unlock this node.
+	node.unlockParent(true)
+	defer node.unlock()
 	// Find index.
 	index := node.search(key)
 	if index >= node.numKeys || node.getKeyAt(index) != key {
@@ -266,11 +270,13 @@ func (node *InternalNode) insertSplit(split Split) Split {
 // delete removes a given tuple from the leaf node, if the given key exists.
 func (node *InternalNode) delete(key int64) {
 	// Get child.
+	node.unlockParent(true)
 	childIdx := node.search(key)
-	child, err := node.getChildAt(childIdx)
+	child, err := node.getAndLockChildAt(childIdx)
 	if err != nil {
 		return
 	}
+	node.initChild(child)
 	defer child.getPage().Put()
 	// Delete from child.
 	child.delete(key)
@@ -314,9 +320,11 @@ func (node *InternalNode) split() Split {
 
 // get returns the value associated with a given key from the leaf node.
 func (node *InternalNode) get(key int64) (value int64, found bool) {
+	// [CONCURRENCY] Unlock parents.
+	node.unlockParent(true)
 	// Find the child.
 	childIdx := node.search(key)
-	child, err := node.getChildAt(childIdx)
+	child, err := node.getAndLockChildAt(childIdx)
 	if err != nil {
 		return 0, false
 	}

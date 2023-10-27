@@ -3,22 +3,19 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
-	// "log"
-	// "net"
-
+	"github.com/csci1270-fall-2023/dbms-projects-handout/pkg/concurrency"
 	config "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/config"
+	db "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/db"
 	list "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/list"
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
+	"github.com/csci1270-fall-2023/dbms-projects-handout/pkg/query"
 	repl "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/repl"
-
-	db "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/db"
-	// query "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/query"
-	// concurrency "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/concurrency"
-	// recovery "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/recovery"
 
 	uuid "github.com/google/uuid"
 )
@@ -40,35 +37,35 @@ func setupCloseHandler(database *db.Database) {
 }
 
 // [CONCURRENCY]
-// // Start listening for connections at port `port`.
-// func startServer(repl *repl.REPL, tm *concurrency.TransactionManager, prompt string, port int) {
-// 	// Handle a connection by running the repl on it.
-// 	handleConn := func(c net.Conn) {
-// 		clientId := uuid.New()
-// 		defer c.Close()
-// 		if tm != nil {
-// 			defer tm.Commit(clientId)
-// 		}
-// 		repl.Run(c, clientId, prompt)
-// 	}
-// 	// Start listening for new connections.
-// 	listener, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	dbName := config.DBName
-// 	fmt.Printf("%v server started listening on localhost:%v\n", dbName,
-// 		listener.Addr().(*net.TCPAddr).Port)
-// 	// Handle each connection.
-// 	for {
-// 		conn, err := listener.Accept()
-// 		if err != nil {
-// 			log.Print(err)
-// 			continue
-// 		}
-// 		go handleConn(conn)
-// 	}
-// }
+// Start listening for connections at port `port`.
+func startServer(repl *repl.REPL, tm *concurrency.TransactionManager, prompt string, port int) {
+	// Handle a connection by running the repl on it.
+	handleConn := func(c net.Conn) {
+		clientId := uuid.New()
+		defer c.Close()
+		if tm != nil {
+			defer tm.Commit(clientId)
+		}
+		repl.Run(c, clientId, prompt)
+	}
+	// Start listening for new connections.
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
+	if err != nil {
+		log.Fatal(err)
+	}
+	dbName := config.DBName
+	fmt.Printf("%v server started listening on localhost:%v\n", dbName,
+		listener.Addr().(*net.TCPAddr).Port)
+	// Handle each connection.
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Print(err)
+			continue
+		}
+		go handleConn(conn)
+	}
+}
 
 // Start the database.
 func main() {
@@ -80,7 +77,7 @@ func main() {
 	var dbFlag = flag.String("db", "data/", "DB folder")
 
 	// [CONCURRENCY]
-	// var portFlag = flag.Int("p", DEFAULT_PORT, "port number")
+	var portFlag = flag.Int("p", DEFAULT_PORT, "port number")
 
 	flag.Parse()
 
@@ -108,7 +105,7 @@ func main() {
 	repls := make([]*repl.REPL, 0)
 
 	// [CONCURRENCY]
-	// var tm *concurrency.TransactionManager
+	var tm *concurrency.TransactionManager
 	server := false
 
 	// [RECOVERY]
@@ -135,17 +132,17 @@ func main() {
 		repls = append(repls, db.DatabaseRepl(database))
 
 	// [QUERY]
-	// case "query":
-	// 	server = false
-	// 	repls = append(repls, db.DatabaseRepl(database))
-	// 	repls = append(repls, query.QueryRepl(database))
+	case "query":
+		server = false
+		repls = append(repls, db.DatabaseRepl(database))
+		repls = append(repls, query.QueryRepl(database))
 
 	// [CONCURRENCY]
-	// case "concurrency":
-	// 	server = true
-	// 	lm := concurrency.NewLockManager()
-	// 	tm = concurrency.NewTransactionManager(lm)
-	// 	repls = append(repls, concurrency.TransactionREPL(database, tm))
+	case "concurrency":
+		server = true
+		lm := concurrency.NewLockManager()
+		tm = concurrency.NewTransactionManager(lm)
+		repls = append(repls, concurrency.TransactionREPL(database, tm))
 
 	// [RECOVERY]
 	// case "recovery":
@@ -176,7 +173,7 @@ func main() {
 	// Start server if server (concurrency or recovery), else run REPL here.
 	if server {
 		// 	[CONCURRENCY]
-		// 	startServer(r, tm, prompt, *portFlag)
+		startServer(r, tm, prompt, *portFlag)
 	} else {
 		r.Run(nil, uuid.New(), prompt)
 	}

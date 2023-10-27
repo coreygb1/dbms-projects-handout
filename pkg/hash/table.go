@@ -71,22 +71,29 @@ func (table *HashTable) GetPager() *pager.Pager {
 
 // Finds the entry with the given key.
 func (table *HashTable) Find(key int64) (utils.Entry, error) {
+	table.RLock()
 	// Hash the key.
 	hash := Hasher(key, table.depth)
 	if hash < 0 || int(hash) >= len(table.buckets) {
+		table.RUnlock()
 		return nil, errors.New("not found")
 	}
 	// Get the corresponding bucket.
-	bucket, err := table.GetBucket(hash)
+	bucket, err := table.GetAndLockBucket(hash, READ_LOCK)
 	if err != nil {
+		table.RUnlock()
 		return nil, err
 	}
+	table.RUnlock()
 	defer bucket.page.Put()
+
 	// Find the entry.
 	entry, found := bucket.Find(key)
 	if !found {
+		bucket.RUnlock()
 		return nil, errors.New("not found")
 	}
+	bucket.RUnlock()
 	return entry, nil
 }
 
@@ -171,24 +178,34 @@ func (table *HashTable) Insert(key int64, value int64) error {
 
 // Update the given key-value pair.
 func (table *HashTable) Update(key int64, value int64) error {
+	table.RLock()
 	hash := Hasher(key, table.depth)
-	bucket, err := table.GetBucket(hash)
+	bucket, err := table.GetAndLockBucket(hash, WRITE_LOCK)
 	if err != nil {
+		table.RUnlock()
 		return err
 	}
 	defer bucket.page.Put()
-	return bucket.Update(key, value)
+	table.RUnlock()
+	defer bucket.WUnlock()
+	err2 := bucket.Update(key, value)
+	return err2
 }
 
 // Delete the given key-value pair, does not coalesce.
 func (table *HashTable) Delete(key int64) error {
+	table.RLock()
 	hash := Hasher(key, table.depth)
-	bucket, err := table.GetBucket(hash)
+	bucket, err := table.GetAndLockBucket(hash, WRITE_LOCK)
 	if err != nil {
+		table.RUnlock()
 		return err
 	}
 	defer bucket.page.Put()
-	return bucket.Delete(key)
+	table.RUnlock()
+	defer bucket.WUnlock()
+	err2 := bucket.Delete(key)
+	return err2
 }
 
 // Select all entries in this table.
@@ -219,12 +236,12 @@ func (table *HashTable) Print(w io.Writer) {
 	io.WriteString(w, fmt.Sprintf("global depth: %d\n", table.depth))
 	for i := range table.buckets {
 		io.WriteString(w, fmt.Sprintf("====\nbucket %d\n", i))
-		bucket, err := table.GetBucket(int64(i))
+		bucket, err := table.GetAndLockBucket(int64(i), READ_LOCK)
 		if err != nil {
 			continue
 		}
 		bucket.Print(w)
-		// bucket.RUnlock()
+		bucket.RUnlock()
 		bucket.page.Put()
 	}
 	io.WriteString(w, "====\n")
@@ -238,12 +255,12 @@ func (table *HashTable) PrintPN(pn int, w io.Writer) {
 		fmt.Println("out of bounds")
 		return
 	}
-	bucket, err := table.GetBucketByPN(int64(pn))
+	bucket, err := table.GetAndLockBucketByPN(int64(pn), READ_LOCK)
 	if err != nil {
 		return
 	}
 	bucket.Print(w)
-	// bucket.RUnlock()
+	bucket.RUnlock()
 	bucket.page.Put()
 }
 
