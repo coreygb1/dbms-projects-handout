@@ -61,13 +61,19 @@ func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 	if insertPos < node.numKeys && node.getKeyAt(insertPos) == key {
 		if update {
 			node.updateValueAt(insertPos, value)
+			node.unlockParent(true)
+			node.unlock()
 			return Split{}
 		} else {
+			node.unlockParent(true)
+			node.unlock()
 			return Split{err: errors.New("cannot insert duplicate key")}
 		}
 	}
 	// Return an error if we're updating a non-existent entry.
 	if update {
+		node.unlockParent(true)
+		node.unlock()
 		return Split{err: errors.New("cannot update non-existent entry")}
 	}
 	// Shift entries to the right if needed.
@@ -79,9 +85,12 @@ func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 	// Modify the Entry at this position.
 	node.modifyEntry(insertPos, BTreeEntry{key: key, value: value})
 	// Check if we need to split the node.
-	if node.numKeys > ENTRIES_PER_LEAF_NODE {
+	if node.numKeys >= ENTRIES_PER_LEAF_NODE {
+		node.unlock()
 		return node.split()
 	}
+	node.unlockParent(true)
+	node.unlock()
 	return Split{}
 	/* SOLUTION }}} */
 }
@@ -200,19 +209,25 @@ func (node *InternalNode) search(key int64) int64 {
 // insert finds the appropriate place in a leaf node to insert a new tuple.
 func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	// Insert the entry into the appropriate child node. Use getChildAt for the indexing
+	node.unlockParent(false)
 	childIdx := node.search(key)
-	child, err := node.getChildAt(childIdx)
+	child, err := node.getAndLockChildAt(childIdx)
 	if err != nil {
+		// ********** should really be unlocking on error
 		return Split{err: err}
 	}
+	node.initChild(child)
 	defer child.getPage().Put()
 	// Insert value into the child.
 	result := child.insert(key, value, update)
 	// Insert a new key into our node if necessary.
 	if result.isSplit {
 		split := node.insertSplit(result)
+		node.unlock()
 		return split
 	}
+	node.unlockParent(true)
+	node.unlock()
 	return Split{err: result.err}
 }
 
@@ -234,7 +249,7 @@ func (node *InternalNode) insertSplit(split Split) Split {
 	node.updatePNAt(insertPos+1, split.rightPN)
 	node.updateNumKeys(node.numKeys + 1)
 	// Check if we need to split.
-	if node.numKeys > KEYS_PER_INTERNAL_NODE {
+	if node.numKeys >= KEYS_PER_INTERNAL_NODE {
 		return node.split()
 	}
 	return Split{}
