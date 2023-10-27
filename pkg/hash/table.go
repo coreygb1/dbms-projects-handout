@@ -159,8 +159,11 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 
 func (table *HashTable) Insert(key int64, value int64) error {
 	/* SOLUTION {{{ */
+	table.WLock()
+	defer table.WUnlock()
 	hash := Hasher(key, table.depth)
-	bucket, err := table.GetBucket(hash)
+	bucket, err := table.GetAndLockBucket(hash, WRITE_LOCK)
+	defer bucket.WUnlock()
 	if err != nil {
 		return err
 	}
@@ -216,11 +219,13 @@ func (table *HashTable) Select() ([]utils.Entry, error) {
 	for i := int64(0); i < table.pager.GetNumPages(); i++ {
 		bucket, err := table.GetAndLockBucketByPN(i, READ_LOCK)
 		if err != nil {
+			table.RUnlock()
 			return nil, err
 		}
 		entries, err := bucket.Select()
 		bucket.GetPage().Put()
 		if err != nil {
+			table.RUnlock()
 			return nil, err
 		}
 		ret = append(ret, entries...)
