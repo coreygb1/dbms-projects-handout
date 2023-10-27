@@ -91,6 +91,8 @@ func (bucket *HashBucket) Delete(key int64) error {
 
 // Select all entries in this bucket.
 func (bucket *HashBucket) Select() (entries []utils.Entry, err error) {
+	table.Rlock()
+	defer table.RUnlock()
 	entries = make([]utils.Entry, 0)
 	for i := int64(0); i < bucket.numKeys; i++ {
 		entries = append(entries, bucket.getEntry(i))

@@ -211,9 +211,10 @@ func (table *HashTable) Delete(key int64) error {
 // Select all entries in this table.
 func (table *HashTable) Select() ([]utils.Entry, error) {
 	/* SOLUTION {{{ */
+	table.RLock()
 	ret := make([]utils.Entry, 0)
 	for i := int64(0); i < table.pager.GetNumPages(); i++ {
-		bucket, err := table.GetBucketByPN(i)
+		bucket, err := table.GetAndLockBucketByPN(i, READ_LOCK)
 		if err != nil {
 			return nil, err
 		}
@@ -223,7 +224,9 @@ func (table *HashTable) Select() ([]utils.Entry, error) {
 			return nil, err
 		}
 		ret = append(ret, entries...)
+		bucket.RUnlock()
 	}
+	table.RUnlock()
 	return ret, nil
 	/* SOLUTION }}} */
 }
