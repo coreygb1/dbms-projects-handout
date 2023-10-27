@@ -1,3 +1,5 @@
+package query
+
 import (
 	"context"
 	"fmt"
