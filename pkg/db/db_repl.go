@@ -29,9 +29,6 @@ func DatabaseRepl(db *Database) *repl.REPL {
 	r.AddCommand("pretty", func(payload string, replConfig *repl.REPLConfig) error {
 		return HandlePretty(db, payload, replConfig.GetWriter())
 	}, "Print out the internal data representation. usage: pretty")
-	r.AddCommand("drop", func(payload string, replConfig *repl.REPLConfig) error {
-		return HandleDropTable(db, payload, replConfig.GetWriter())
-	}, "Delete a table. usage: drop table <table>")
 	return r
 }
 
@@ -217,23 +214,6 @@ func HandlePretty(d *Database, payload string, w io.Writer) (err error) {
 		return fmt.Errorf("usage: pretty <optional pagenumber> from <table>")
 	}
 	return nil
-}
-
-// HandleDropTable handles the drop table command.
-func HandleDropTable(d *Database, payload string, w io.Writer) error {
-    fields := strings.Fields(payload)
-    numFields := len(fields)
-    // Usage: drop table <table>
-    if numFields != 3 || fields[1] != "table" {
-        return fmt.Errorf("usage: drop table <table>")
-    }
-    tableName := fields[2]
-    err := d.DeleteTable(tableName)
-    if err != nil {
-        return fmt.Errorf("drop error: %v", err)
-    }
-    io.WriteString(w, fmt.Sprintf("Table %s dropped.\n", tableName))
-    return nil
 }
 
 // printResults prints all given entries in a standard format.

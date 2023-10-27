@@ -38,14 +38,6 @@ func (bucket *HashBucket) GetPage() *pager.Page {
 	return bucket.page
 }
 
-func (bucket *HashBucket) GetEntry(i int64) utils.Entry {
-	return bucket.getEntry(i)
-}
-
-func (bucket *HashBucket) GetNumKeys() int64 {
-	return bucket.numKeys
-}
-
 // Finds the entry with the given key.
 func (bucket *HashBucket) Find(key int64) (utils.Entry, bool) {
 	for i := int64(0); i < bucket.numKeys; i++ {
@@ -54,21 +46,6 @@ func (bucket *HashBucket) Find(key int64) (utils.Entry, bool) {
 		}
 	}
 	return nil, false
-}
-
-// Finds the entry with the given key.
-func (bucket *HashBucket) FindAll(key int64) ([]utils.Entry, bool) {
-	entries := make([]utils.Entry, 0)
-	for i := int64(0); i < bucket.numKeys; i++ {
-		if bucket.getKeyAt(i) == key {
-			entries = append(entries, bucket.getEntry(i))
-		}
-	}
-	if len(entries) > 0 {
-		return entries, true
-	} else {
-		return nil, false
-	}
 }
 
 // Inserts the given key-value pair, splits if necessary.

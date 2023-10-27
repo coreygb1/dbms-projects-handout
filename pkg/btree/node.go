@@ -54,33 +54,38 @@ func (node *LeafNode) search(key int64) int64 {
 // insert finds the appropriate place in a leaf node to insert a new tuple.
 // if update is true, allow overwriting existing keys. else, error.
 func (node *LeafNode) insert(key int64, value int64, update bool) Split {
-	index := node.search(key)
-	if (update == true) {
-		if (index < node.numKeys) && (key == node.getKeyAt(int64(index))) {
-			node.updateValueAt(index, value)
-			return Split{isSplit: false}
+	/* SOLUTION {{{ */
+	// Get insert position.
+	insertPos := node.search(key)
+	// Check if this is a duplicate entry.
+	if insertPos < node.numKeys && node.getKeyAt(insertPos) == key {
+		if update {
+			node.updateValueAt(insertPos, value)
+			return Split{}
 		} else {
-			return Split{err: fmt.Errorf("Update key not found")}
+			return Split{err: errors.New("cannot insert duplicate key")}
 		}
 	}
-	
-	if (key == node.getKeyAt(int64(index))) && (index < node.numKeys) {
-		return Split{err: fmt.Errorf("Duplicate keys cannot be updated")}
-	} else {
-		for i := node.numKeys-1; i >= index; i-- {
-			node.updateKeyAt(i+1, node.getKeyAt(i)) // make sure no error when range too large
-			node.updateValueAt(i+1, node.getValueAt(i))
-		}
-		node.modifyEntry(index, BTreeEntry{key: key, value: value})
-		node.updateNumKeys(node.numKeys + 1)
+	// Return an error if we're updating a non-existent entry.
+	if update {
+		return Split{err: errors.New("cannot update non-existent entry")}
 	}
-	if node.numKeys >= ENTRIES_PER_LEAF_NODE {
+	// Shift entries to the right if needed.
+	for i := node.numKeys - 1; i >= insertPos; i-- {
+		node.updateKeyAt(i+1, node.getKeyAt(i))
+		node.updateValueAt(i+1, node.getValueAt(i))
+	}
+	node.updateNumKeys(node.numKeys + 1)
+	// Modify the Entry at this position.
+	node.modifyEntry(insertPos, BTreeEntry{key: key, value: value})
+	// Check if we need to split the node.
+	if node.numKeys > ENTRIES_PER_LEAF_NODE {
 		return node.split()
-	} else {
-		return Split{isSplit: false}
 	}
-
+	return Split{}
+	/* SOLUTION }}} */
 }
+
 
 // delete removes a given tuple from the leaf node, if the given key exists.
 func (node *LeafNode) delete(key int64) {
@@ -102,53 +107,31 @@ func (node *LeafNode) delete(key int64) {
 
 // split is a helper function to split a leaf node, then propagate the split upwards.
 func (node *LeafNode) split() Split {
-	///// create and set new sibling leaf
-
-	leaf, err := createLeafNode(node.page.GetPager()) 
-
+	/* SOLUTION {{{ */
+	// Create a new leaf node to split our keys.
+	newNode, err := createLeafNode(node.page.GetPager())
 	if err != nil {
-		fmt.Println("error \n")
-		return Split{
-			err: err,
-		}
+		return Split{err: err}
 	}
-	defer leaf.getPage().Put()
-
-	medianKeyIndex := node.numKeys / 2
-	
-	// fill in the new leaf entries
-	leaf.updateNumKeys(node.numKeys - medianKeyIndex)
-	for i := medianKeyIndex; i <= node.numKeys-1; i++ {
-		entry := BTreeEntry{
-			key:   node.getKeyAt(i),
-			value: node.getValueAt(i),
-		}
-		leaf.modifyEntry(i-medianKeyIndex, entry)
+	defer newNode.getPage().Put()
+	// Set the right sibling for our two nodes.
+	prevSiblingPN := node.setRightSibling(newNode.page.GetPageNum())
+	newNode.setRightSibling(prevSiblingPN)
+	// Transfer entries to the new node (plus the new entry) accordingly.
+	midpoint := node.numKeys / 2
+	for i := midpoint; i < node.numKeys; i++ {
+		newNode.updateKeyAt(newNode.numKeys, node.getKeyAt(i))
+		newNode.updateValueAt(newNode.numKeys, node.getValueAt(i))
+		newNode.updateNumKeys(newNode.numKeys + 1)
 	}
-	// "delete" old leaf overflow entries by changing numKeys
-	node.updateNumKeys(medianKeyIndex)
-	
-	// set new siblings
-	leaf.setRightSibling(node.rightSiblingPN)
-	node.setRightSibling(leaf.getPage().GetPageNum()) 
-
-	// // -----------
-	// // Print both nodes after the split
-	// bufAfterOriginal := &bytes.Buffer{}
-	// bufAfterNewLeaf := &bytes.Buffer{}
-	// node.printNode(bufAfterOriginal, "", "    ")
-	// leaf.printNode(bufAfterNewLeaf, "", "    ")
-	// fmt.Printf("Old Leaf after split: \n%s", bufAfterOriginal.String())
-	// fmt.Printf("New Leaf after split: \n%s", bufAfterNewLeaf.String())
-	// // -----------
-
-	// return split
+	node.updateNumKeys(midpoint)
 	return Split{
 		isSplit: true,
-		key: leaf.getKeyAt(0),
-		leftPN: node.getPage().GetPageNum(),
-		rightPN: leaf.getPage().GetPageNum(),
+		key:     newNode.getKeyAt(0), // Get the right node's first key
+		leftPN:  node.page.GetPageNum(),
+		rightPN: newNode.page.GetPageNum(),
 	}
+	/* SOLUTION }}} */
 }
 
 // get returns the value associated with a given key from the leaf node.
@@ -216,7 +199,6 @@ func (node *InternalNode) search(key int64) int64 {
 
 // insert finds the appropriate place in a leaf node to insert a new tuple.
 func (node *InternalNode) insert(key int64, value int64, update bool) Split {
-	// fmt.Println("insert internal has started")
 	// Insert the entry into the appropriate child node. Use getChildAt for the indexing
 	childIdx := node.search(key)
 	child, err := node.getChildAt(childIdx)
@@ -231,40 +213,32 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 		split := node.insertSplit(result)
 		return split
 	}
-
-	// // -----------
-	// // Print node after insert
-	// bufAfter := &bytes.Buffer{}
-	// node.printNode(bufAfter, "", "    ")
-	// fmt.Printf("Node after split: \n%s", bufAfter.String())
-	// // -----------
-
-
 	return Split{err: result.err}
 }
 
 // insertSplit inserts a split result into an internal node.
 // If this insertion results in another split, the split is cascaded upwards.
 func (node *InternalNode) insertSplit(split Split) Split {
-
-	index := node.search(split.key)
-	if index < node.numKeys {
-		for i := node.numKeys-1; i >= index; i-- {
-			node.updateKeyAt(i+1, node.getKeyAt(i)) 
-			node.updatePNAt(i+2, node.getPNAt(i+1))
-		}
+	/* SOLUTION {{{ */
+	insertPos := node.search(split.key)
+	// Shift keys to the right.
+	for i := node.numKeys - 1; i >= insertPos; i-- {
+		node.updateKeyAt(i+1, node.getKeyAt(i))
 	}
-	
+	// Shift children to the right.
+	for i := node.numKeys; i > insertPos; i-- {
+		node.updatePNAt(i+1, node.getPNAt(i))
+	}
+	// Insert the new key and pagenumber at this position.
+	node.updateKeyAt(insertPos, split.key)
+	node.updatePNAt(insertPos+1, split.rightPN)
 	node.updateNumKeys(node.numKeys + 1)
-	node.updateKeyAt(index, split.key)
-	node.updatePNAt(index+1, split.rightPN)
-
-	
-	if node.numKeys >= KEYS_PER_INTERNAL_NODE {
+	// Check if we need to split.
+	if node.numKeys > KEYS_PER_INTERNAL_NODE {
 		return node.split()
-	} else {
-		return Split{isSplit: false}
 	}
+	return Split{}
+	/* SOLUTION }}} */
 }
 
 // delete removes a given tuple from the leaf node, if the given key exists.
@@ -284,38 +258,33 @@ func (node *InternalNode) delete(key int64) {
 
 // split is a helper function that splits an internal node, then propagates the split upwards.
 func (node *InternalNode) split() Split {
-	// fmt.Println("split has started")
-
-	intern, err := createInternalNode(node.page.GetPager())
+	/* SOLUTION {{{ */
+	// Create a new internal node to split our keys.
+	newNode, err := createInternalNode(node.page.GetPager())
 	if err != nil {
-		return Split{
-			err: err,
+		return Split{err: err}
+	}
+	defer newNode.getPage().Put()
+	// Compute the midpoint based on the number of children to move.
+	midpoint := (node.numKeys - 1) / 2
+	// Transfer the keys to the new node.
+	for i := midpoint; i <= node.numKeys; i++ {
+		newNode.updatePNAt(newNode.numKeys, node.getPNAt(i))
+		if i < node.numKeys {
+			newNode.updateKeyAt(newNode.numKeys, node.getKeyAt(i))
+			newNode.updateNumKeys(newNode.numKeys + 1)
 		}
 	}
-
-	defer intern.getPage().Put() 
-	medianKeyIndex := node.numKeys / 2
-	medianKey := node.getKeyAt(medianKeyIndex)
-
-	// fill in the new leaf entries, excluding median value
-	count := int64(-1)
-	for i := medianKeyIndex + 1; i <= node.numKeys-1; i++ {
-		count += 1
-		intern.updateKeyAt(count, node.getKeyAt(i)) 
-		intern.updatePNAt(count, node.getPNAt(i))
-	}
-	intern.updateNumKeys(count+1)
-	intern.updatePNAt(count+1, node.getPNAt(node.numKeys))
-	
-	// "delete" old node overflow entries by changing numKeys
-	node.updateNumKeys(medianKeyIndex) 
-
+	middleKey := node.getKeyAt(midpoint - 1)
+	node.updateNumKeys(midpoint - 1)
+	// Propagate the split.
 	return Split{
 		isSplit: true,
-		key: medianKey,
-		leftPN: node.getPage().GetPageNum(),
-		rightPN: intern.getPage().GetPageNum(),
+		key:     middleKey,
+		leftPN:  node.page.GetPageNum(),
+		rightPN: newNode.page.GetPageNum(),
 	}
+	/* SOLUTION }}} */
 }
 
 // get returns the value associated with a given key from the leaf node.

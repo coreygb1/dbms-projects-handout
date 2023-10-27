@@ -1,9 +1,6 @@
-package query
-
 import (
 	"context"
 	"os"
-	"fmt"
 
 	db "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/db"
 	hash "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/hash"
@@ -32,8 +29,6 @@ func buildHashIndex(
 	useKey bool,
 ) (tempIndex *hash.HashIndex, dbName string, err error) {
 	// Get a temporary db file.
-	fmt.Println("Source Table: \n")
-	sourceTable.Print(os.Stdout)
 	dbName, err = db.GetTempDB()
 	if err != nil {
 		return nil, "", err
@@ -43,42 +38,33 @@ func buildHashIndex(
 	if err != nil {
 		return nil, "", err
 	}
-	// start table and get first entry
+	// Build the hash index.
+	/* SOLUTION {{{ */
+	// Get the cursor and load the hash table.
 	cursor, err := sourceTable.TableStart()
 	if err != nil {
 		return nil, "", err
 	}
-
-	if err != nil {
-		return nil, "", err
-	}
-	
-	endBool := false
-	isEnd := cursor.IsEnd()
-	for !endBool {
-		for isEnd && !endBool {
-			endBool = cursor.StepForward()
-			isEnd = cursor.IsEnd()
+	// Loop through all entries.
+	for {
+		if !cursor.IsEnd() {
+			val, err := cursor.GetEntry()
+			if err != nil {
+				return nil, "", err
+			}
+			// Swap keys and values if needed, this needs to be swapped back later.
+			if useKey {
+				tempIndex.Insert(val.GetKey(), val.GetValue())
+			} else {
+				tempIndex.Insert(val.GetValue(), val.GetKey())
+			}
 		}
-		if endBool {
+		if cursor.StepForward() {
 			break
 		}
-		entry, err := cursor.GetEntry()
-		fmt.Println("Entry: %v \n", entry)
-		if useKey {
-			err = tempIndex.Insert(entry.GetKey(), entry.GetValue())
-		} else {
-			err = tempIndex.Insert(entry.GetValue(), entry.GetKey())
-		}
-		if err != nil {
-			return nil, "", err
-		}
-		endBool = cursor.StepForward()
-		isEnd = cursor.IsEnd()
 	}
-	fmt.Println("Hash Table: \n")
-	tempIndex.GetTable().Print(os.Stdout)
 	return tempIndex, dbName, nil
+	/* SOLUTION }}} */
 }
 
 // sendResult attempts to send a single join result to the resultsChan channel as long as the errgroup hasn't been cancelled.
@@ -86,7 +72,7 @@ func sendResult(
 	ctx context.Context,
 	resultsChan chan EntryPair,
 	result EntryPair,
-) error {
+) (err error) {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -103,37 +89,60 @@ func probeBuckets(
 	rBucket *hash.HashBucket,
 	joinOnLeftKey bool,
 	joinOnRightKey bool,
-) error {
+) (err error) {
 	defer lBucket.GetPage().Put()
 	defer rBucket.GetPage().Put()
 	// Probe buckets.
-	for i := int64(0); i < lBucket.GetNumKeys(); i++ {
-		left_entry := lBucket.GetEntry(i)
-		right_entries, match := rBucket.FindAll(left_entry.GetKey())
-		if match {
-			var return_left hash.HashEntry
-			if !joinOnLeftKey {
-				return_left.SetKey(left_entry.GetValue())
-				return_left.SetValue(left_entry.GetKey())
-			} else {
-				return_left.SetKey(left_entry.GetKey())
-				return_left.SetValue(left_entry.GetValue())
-			}
-			var return_right hash.HashEntry
-			for i := 0; i < len(right_entries); i++ {
-				right_entry := right_entries[i].(hash.HashEntry)
-				if !joinOnRightKey {
-					return_right.SetKey(right_entry.GetValue())
-					return_right.SetValue(right_entry.GetKey())
+	/* SOLUTION {{{ */
+	// Get bucket entries.
+	lBucketEntries, err := lBucket.Select()
+	if err != nil {
+		return err
+	}
+	rBucketEntries, err := rBucket.Select()
+	if err != nil {
+		return err
+	}
+	// Set up the bloom filter.
+	filter := CreateFilter(DEFAULT_FILTER_SIZE)
+	for _, rEntry := range rBucketEntries {
+		filter.Insert(rEntry.GetKey())
+	}
+	for _, lEntry := range lBucketEntries {
+		lMatchKey := lEntry.GetKey()
+		// Check the bloom filter first.
+		if !filter.Contains(lMatchKey) {
+			continue
+		}
+		// Check all entries if the key is in the filter.
+		for _, rEntry := range rBucketEntries {
+			rMatchKey := rEntry.GetKey()
+			if lMatchKey == rMatchKey {
+				// Swap keys and values as needed.
+				var lResult, rResult hash.HashEntry
+				if joinOnLeftKey {
+					lResult.SetKey(lEntry.GetKey())
+					lResult.SetValue(lEntry.GetValue())
 				} else {
-					return_right.SetKey(right_entry.GetKey())
-					return_right.SetValue(right_entry.GetValue())
+					lResult.SetKey(lEntry.GetValue())
+					lResult.SetValue(lEntry.GetKey())
 				}
-				sendResult(ctx, resultsChan, EntryPair{l: return_left, r: return_right})
+				if joinOnRightKey {
+					rResult.SetKey(rEntry.GetKey())
+					rResult.SetValue(rEntry.GetValue())
+				} else {
+					rResult.SetKey(rEntry.GetValue())
+					rResult.SetValue(rEntry.GetKey())
+				}
+				err = sendResult(ctx, resultsChan, EntryPair{l: lResult, r: rResult})
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
 	return nil
+	/* SOLUTION }}} */
 }
 
 // Join leftTable on rightTable using Grace Hash Join.
@@ -143,7 +152,7 @@ func Join(
 	rightTable db.Index,
 	joinOnLeftKey bool,
 	joinOnRightKey bool,
-) (chan EntryPair, context.Context, *errgroup.Group, func(), error) {
+) (resultsChan chan EntryPair, ctxt context.Context, group *errgroup.Group, cleanupCallback func(), err error) {
 	leftHashIndex, leftDbName, err := buildHashIndex(leftTable, joinOnLeftKey)
 	if err != nil {
 		return nil, nil, nil, nil, err
@@ -154,7 +163,7 @@ func Join(
 		os.Remove(leftDbName + ".meta")
 		return nil, nil, nil, nil, err
 	}
-	cleanupCallback := func() {
+	cleanupCallback = func() {
 		os.Remove(leftDbName)
 		os.Remove(leftDbName + ".meta")
 		os.Remove(rightDbName)
@@ -173,8 +182,8 @@ func Join(
 		}
 	}
 	// Probe phase: match buckets to buckets and emit entries that match.
-	group, ctx := errgroup.WithContext(ctx)
-	resultsChan := make(chan EntryPair, 1024)
+	group, ctx = errgroup.WithContext(ctx)
+	resultsChan = make(chan EntryPair, 1024)
 	// Iterate through hash buckets, keeping track of pairs we've seen before.
 	leftBuckets := leftHashTable.GetBuckets()
 	rightBuckets := rightHashTable.GetBuckets()

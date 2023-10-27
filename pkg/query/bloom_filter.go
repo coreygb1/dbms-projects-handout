@@ -11,23 +11,28 @@ type BloomFilter struct {
 }
 
 // CreateFilter initializes a BloomFilter with the given size.
-func CreateFilter(size int64) *BloomFilter {
-	bloom := BloomFilter{
-        size: size,  // Set the 'size' field to your desired value
-        bits: bitset.New(uint(size)), // Initialize the 'bits' field with a new BitSet
-    }
-	return &bloom
+func CreateFilter(size int64) (bf *BloomFilter) {
+	/* SOLUTION {{{ */
+	return &BloomFilter{
+		size: size,
+		bits: bitset.New(uint(size)),
+	}
+	/* SOLUTION }}} */
 }
 
 // Insert adds an element into the bloom filter.
 func (filter *BloomFilter) Insert(key int64) {
+	/* SOLUTION {{{ */
 	filter.bits.Set(hash.XxHasher(key, filter.size))
 	filter.bits.Set(hash.MurmurHasher(key, filter.size))
+	/* SOLUTION }}} */
 }
 
 // Contains checks if the given key can be found in the bloom filter/
-func (filter *BloomFilter) Contains(key int64) bool {
-	test1 := filter.bits.Test(hash.XxHasher(key, filter.size))
-	test2 := filter.bits.Test(hash.MurmurHasher(key, filter.size))
-	return (test1 && test2)
+func (filter *BloomFilter) Contains(key int64) (contains bool) {
+	/* SOLUTION {{{ */
+	return (filter.bits.Test(hash.XxHasher(key, filter.size)) &&
+		filter.bits.Test(hash.MurmurHasher(key, filter.size)))
+	/* SOLUTION }}} */
 }
+

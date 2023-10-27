@@ -173,26 +173,7 @@ func (table *BTreeIndex) Delete(key int64) error {
 
 // Select returns a slice of all entries in the table.
 func (table *BTreeIndex) Select() ([]utils.Entry, error) {
-	// Get start cursor and assert type safely
-    cursor_startInt, err := table.TableStart()
-    if err != nil {
-        return nil, err
-    }
-    cursor_start, _ := cursor_startInt.(*BTreeCursor)
-    start_entry, _ := cursor_start.GetEntry()
-	start_key := start_entry.(*BTreeEntry).key
-
-    // Get end cursor and assert type safely
-    cursor_endInt, err := table.TableEnd()
-    if err != nil {
-        return nil, err
-    }
-	cursor_end, _ := cursor_endInt.(*BTreeCursor)
-    end_entry, _ := cursor_end.GetEntry()
-	end_key := end_entry.(*BTreeEntry).key
-
-    // Get and return range
-    return table.TableFindRange(start_key, end_key)
+	panic("function not yet implemented")
 }
 
 // Print will pretty-print all nodes in the table.

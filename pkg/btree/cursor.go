@@ -104,36 +104,29 @@ func (table *BTreeIndex) TableFind(key int64) (utils.Cursor, error) {
 
 // TableFindRange returns a slice of Entries with keys between the startKey and endKey.
 func (table *BTreeIndex) TableFindRange(startKey int64, endKey int64) ([]utils.Entry, error) {
-	// panic("function not yet implemented")
-	cursorInt, err := table.TableFind(startKey)
+	/* SOLUTION {{{ */
+	// Initialize entries array, get starting cursor.
+	entries := make([]utils.Entry, 0)
+	cursor, err := table.TableFind(startKey)
 	if err != nil {
-		return nil, err
+		return entries, err
 	}
-	cursor := cursorInt.(*BTreeCursor)
-	
-	cursor_endInt, err := table.TableFind(endKey)
+	// Keep advancing the cursor and adding the current entry to the list of
+	// entries until reaching the end key.
+	curEntry, err := cursor.GetEntry()
 	if err != nil {
-		return nil, err
+		return entries, err
 	}
-	cursor_end := cursor_endInt.(*BTreeCursor)
-	end_cellnum := cursor_end.cellnum
-	end_node := cursor_end.curNode
-
-	slice := make([]utils.Entry, 0)
-	
-	end_bool := false
-	for end_bool != true {
-		entry, err :=  cursor.GetEntry()
-		if err != nil {
-			return nil, err
-		}
-		slice = append(slice, entry)
+	for endKey > curEntry.GetKey() && !cursor.IsEnd() {
+		entries = append(entries, curEntry)
 		cursor.StepForward()
-		if cursor.curNode == end_node && cursor.cellnum == end_cellnum {
-			end_bool = true
+		curEntry, err = cursor.GetEntry()
+		if err != nil {
+			return entries, err
 		}
 	}
-	return slice, nil
+	return entries, nil
+	/* SOLUTION }}} */
 }
 
 // stepForward moves the cursor ahead by one entry. Returns true at the end of the BTree.
