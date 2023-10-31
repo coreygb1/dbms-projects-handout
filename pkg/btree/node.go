@@ -224,6 +224,9 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	// Insert a new key into our node if necessary.
 	if result.isSplit {
 		split := node.insertSplit(result)
+		if !split.isSplit {
+			node.unlockParent(true)
+		}
 		node.unlock()
 		return split
 	}
