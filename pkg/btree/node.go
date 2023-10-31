@@ -56,6 +56,7 @@ func (node *LeafNode) search(key int64) int64 {
 func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 	/* SOLUTION {{{ */
 	// Get insert position.
+	node.unlockParent(false)
 	insertPos := node.search(key)
 	// Check if this is a duplicate entry.
 	if insertPos < node.numKeys && node.getKeyAt(insertPos) == key {
@@ -214,7 +215,7 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	child, err := node.getAndLockChildAt(childIdx)
 	if err != nil {
 		node.unlockParent(true)
-		node.unlock()
+		// node.unlock()
 		return Split{err: err}
 	}
 	node.initChild(child)
@@ -227,7 +228,7 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 		if !split.isSplit {
 			node.unlockParent(true)
 		}
-		node.unlock()
+		// node.unlock()
 		return split
 	}
 	return Split{err: result.err}
