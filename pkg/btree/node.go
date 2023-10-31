@@ -215,7 +215,7 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 		// 	current.unlockParent(true)
 		// 	current.
 		// }
-		// node.unlock()
+		node.unlock()
 		return Split{err: err}
 	}
 	node.initChild(child)
@@ -225,10 +225,10 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	// Insert a new key into our node if necessary.
 	if result.isSplit {
 		split := node.insertSplit(result)
+		node.unlock()
+		return split
 	}
 	node.unlock()
-	return split
-	
 	// if result.isSplit {
 	// 	split := node.insertSplit(result)
 	// 	if !split.isSplit {
