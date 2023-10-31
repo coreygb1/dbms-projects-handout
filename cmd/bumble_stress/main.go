@@ -87,7 +87,7 @@ func main() {
 	// Setup close conditions.
 	defer func() {
 		time.Sleep(STARTUP)
-		defer database.Close()
+		database.Close()
 	}()
 	setupCloseHandler(database)
 	// Clean up old db resources.
