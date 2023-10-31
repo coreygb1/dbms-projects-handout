@@ -56,24 +56,21 @@ func (node *LeafNode) search(key int64) int64 {
 func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 	/* SOLUTION {{{ */
 	// Get insert position.
-	node.unlockParent(false)
+	// node.unlockParent(false)
 	insertPos := node.search(key)
 	// Check if this is a duplicate entry.
 	if insertPos < node.numKeys && node.getKeyAt(insertPos) == key {
 		if update {
 			node.updateValueAt(insertPos, value)
-			node.unlockParent(true)
 			node.unlock()
 			return Split{}
 		} else {
-			node.unlockParent(true)
 			node.unlock()
 			return Split{err: errors.New("cannot insert duplicate key")}
 		}
 	}
 	// Return an error if we're updating a non-existent entry.
 	if update {
-		node.unlockParent(true)
 		node.unlock()
 		return Split{err: errors.New("cannot update non-existent entry")}
 	}
@@ -90,7 +87,6 @@ func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 		node.unlock()
 		return node.split()
 	}
-	node.unlockParent(true)
 	node.unlock()
 	return Split{}
 	/* SOLUTION }}} */
@@ -214,7 +210,11 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	childIdx := node.search(key)
 	child, err := node.getAndLockChildAt(childIdx)
 	if err != nil {
-		node.unlockParent(true)
+		// current = node
+		// while current != nil {
+		// 	current.unlockParent(true)
+		// 	current.
+		// }
 		// node.unlock()
 		return Split{err: err}
 	}
@@ -225,12 +225,18 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	// Insert a new key into our node if necessary.
 	if result.isSplit {
 		split := node.insertSplit(result)
-		if !split.isSplit {
-			node.unlockParent(true)
-		}
-		// node.unlock()
-		return split
 	}
+	node.unlock()
+	return split
+	
+	// if result.isSplit {
+	// 	split := node.insertSplit(result)
+	// 	if !split.isSplit {
+	// 		node.unlockParent(true)
+	// 	}
+	// 	node.unlock()
+	// 	return split
+	// }
 	return Split{err: result.err}
 }
 
