@@ -102,11 +102,11 @@ func (db *Database) createTable(name string, indexType IndexType) (index Index, 
 		if err != nil {
 			return nil, err
 		}
-	// case HashIndexType:
-	// 	index, err = hash.OpenTable(path)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
+	case HashIndexType:
+		index, err = hash.OpenTable(path)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, errors.New("invalid index type")
 	}
