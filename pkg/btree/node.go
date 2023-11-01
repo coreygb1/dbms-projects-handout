@@ -214,7 +214,8 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	childIdx := node.search(key)
 	child, err := node.getAndLockChildAt(childIdx)
 	if err != nil {
-		///// should fix error
+		node.unlockParent(true)
+		node.unlock()
 		return Split{err: err}
 	}
 	node.initChild(child)
@@ -224,12 +225,10 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	// Insert a new key into our node if necessary.
 	if result.isSplit {
 		split := node.insertSplit(result)
-		if split.isSplit {
-			node.unlock()
-		} else {
-			node.unlock()
-			node.unlockParent(true) 
+		if !split.isSplit {
+			node.unlockParent(true)
 		}
+		node.unlock()
 		return split
 	}
 	return Split{err: result.err}
