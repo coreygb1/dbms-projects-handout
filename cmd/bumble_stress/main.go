@@ -85,11 +85,11 @@ func main() {
 		panic(err)
 	}
 	// Setup close conditions.
-	// defer func() {
-	// 	time.Sleep(STARTUP)
-	// 	database.Close()
-	// }()
-	defer database.Close()
+	defer func() {
+		time.Sleep(STARTUP)
+		database.Close()
+	}()
+	// defer database.Close()
 	setupCloseHandler(database)
 	// Clean up old db resources.
 	os.Remove("./data/t")
