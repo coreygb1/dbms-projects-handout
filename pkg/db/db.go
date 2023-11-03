@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	btree "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/btree"
+	hash "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/hash"
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
 	utils "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/utils"
 )
