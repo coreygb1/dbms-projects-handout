@@ -51,25 +51,67 @@ func (node *LeafNode) search(key int64) int64 {
 	return int64(minIndex)
 }
 
-// insert finds the appropriate place in a leaf node to insert a new tuple.
-// if update is true, allow overwriting existing keys. else, error.
+// // insert finds the appropriate place in a leaf node to insert a new tuple.
+// // if update is true, allow overwriting existing keys. else, error.
+// func (node *LeafNode) insert(key int64, value int64, update bool) Split {
+// 	/* SOLUTION {{{ */
+// 	// Get insert position.
+// 	defer node.unlock()
+// 	node.unlockParent(false)
+// 	insertPos := node.search(key)
+// 	// Check if this is a duplicate entry.
+// 	if insertPos < node.numKeys && node.getKeyAt(insertPos) == key {
+// 		if update {
+// 			node.updateValueAt(insertPos, value)
+// 			return Split{}
+// 		} else {
+// 			return Split{err: errors.New("cannot insert duplicate key")}
+// 		}
+// 	}
+// 	// Return an error if we're updating a non-existent entry.
+// 	if update {
+// 		return Split{err: errors.New("cannot update non-existent entry")}
+// 	}
+// 	// Shift entries to the right if needed.
+// 	for i := node.numKeys - 1; i >= insertPos; i-- {
+// 		node.updateKeyAt(i+1, node.getKeyAt(i))
+// 		node.updateValueAt(i+1, node.getValueAt(i))
+// 	}
+// 	node.updateNumKeys(node.numKeys + 1)
+// 	// Modify the Entry at this position.
+// 	node.modifyEntry(insertPos, BTreeEntry{key: key, value: value})
+// 	// Check if we need to split the node.
+// 	if node.numKeys >= ENTRIES_PER_LEAF_NODE {
+// 		node.unlockParent(true)
+// 		return node.split()
+// 	}
+// 	return Split{}
+// 	/* SOLUTION }}} */
+// }
+
+
+
 func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 	/* SOLUTION {{{ */
 	// Get insert position.
-	defer node.unlock()
-	node.unlockParent(false)
 	insertPos := node.search(key)
 	// Check if this is a duplicate entry.
 	if insertPos < node.numKeys && node.getKeyAt(insertPos) == key {
 		if update {
 			node.updateValueAt(insertPos, value)
+			node.unlockParent(true)
+			node.unlock()
 			return Split{}
 		} else {
+			node.unlockParent(true)
+			node.unlock()
 			return Split{err: errors.New("cannot insert duplicate key")}
 		}
 	}
 	// Return an error if we're updating a non-existent entry.
 	if update {
+		node.unlockParent(true)
+		node.unlock()
 		return Split{err: errors.New("cannot update non-existent entry")}
 	}
 	// Shift entries to the right if needed.
@@ -82,12 +124,17 @@ func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 	node.modifyEntry(insertPos, BTreeEntry{key: key, value: value})
 	// Check if we need to split the node.
 	if node.numKeys >= ENTRIES_PER_LEAF_NODE {
-		node.unlockParent(true)
+		node.unlock()
 		return node.split()
 	}
+	node.unlockParent(true)
+	node.unlock()
 	return Split{}
 	/* SOLUTION }}} */
 }
+
+
+
 
 
 // delete removes a given tuple from the leaf node, if the given key exists.
@@ -200,32 +247,64 @@ func (node *InternalNode) search(key int64) int64 {
 	return int64(minIndex)
 }
 
+// // insert finds the appropriate place in a leaf node to insert a new tuple.
+// func (node *InternalNode) insert(key int64, value int64, update bool) Split {
+// 	// Insert the entry into the appropriate child node. Use getChildAt for the indexing
+	
+// 	node.unlockParent(false)
+// 	childIdx := node.search(key)
+// 	child, err := node.getAndLockChildAt(childIdx)
+// 	if err != nil {
+// 		return Split{err: err}
+// 	}
+// 	node.initChild(child)
+	
+// 	defer child.getPage().Put()
+// 	// Insert value into the child.
+// 	result := child.insert(key, value, update)
+// 	// Insert a new key into our node if necessary.
+// 	if result.isSplit {
+// 		split := node.insertSplit(result)
+// 		node.unlockParent(true)
+// 		node.unlock()
+// 		return split
+// 	}
+// 	node.unlockParent(true)
+// 	node.unlock()
+// 	return Split{err: result.err}
+// }
+
+
+
 // insert finds the appropriate place in a leaf node to insert a new tuple.
 func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	// Insert the entry into the appropriate child node. Use getChildAt for the indexing
-	
 	node.unlockParent(false)
 	childIdx := node.search(key)
 	child, err := node.getAndLockChildAt(childIdx)
 	if err != nil {
+		node.unlockParent(true)
+		node.unlock()
 		return Split{err: err}
 	}
 	node.initChild(child)
-	
 	defer child.getPage().Put()
 	// Insert value into the child.
 	result := child.insert(key, value, update)
 	// Insert a new key into our node if necessary.
 	if result.isSplit {
 		split := node.insertSplit(result)
-		node.unlockParent(true)
+		if !split.isSplit {
+			node.unlockParent(true)
+		}
 		node.unlock()
 		return split
 	}
-	node.unlockParent(true)
-	node.unlock()
 	return Split{err: result.err}
 }
+
+
+
 
 // insertSplit inserts a split result into an internal node.
 // If this insertion results in another split, the split is cascaded upwards.
