@@ -213,7 +213,7 @@ func (node *InternalNode) search(key int64) int64 {
 func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	// Insert the entry into the appropriate child node. Use getChildAt for the indexing
 	
-	if node.numKeys < KEYS_PER_INTERNAL_NODE { ////
+	if node.numKeys <= KEYS_PER_INTERNAL_NODE - 1{ ////
 		node.unlockParent(false)
 	} ////
 	childIdx := node.search(key)
