@@ -173,7 +173,29 @@ func (table *BTreeIndex) Delete(key int64) error {
 
 // Select returns a slice of all entries in the table.
 func (table *BTreeIndex) Select() ([]utils.Entry, error) {
-	panic("function not yet implemented")
+	// Use a cursor to traverse the table from start to end.
+	entries := make([]utils.Entry, 0)
+	cursor, err := table.TableStart()
+	if err != nil {
+		return nil, err
+	}
+
+	// Traverse over all entries.
+	for {
+		atEnd := cursor.IsEnd()
+		if !atEnd {
+			entry, err := cursor.GetEntry()
+			if err != nil {
+				return nil, err
+			}
+			entries = append(entries, entry)
+		}
+		if err := cursor.StepForward(); err {
+			break
+		}
+	}
+
+	return entries, nil
 }
 
 // Print will pretty-print all nodes in the table.

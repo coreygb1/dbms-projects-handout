@@ -41,6 +41,7 @@ func (table *BTreeIndex) TableStart() (utils.Cursor, error) {
 	leftmostNode := pageToLeafNode(curPage)
 	cursor.isEnd = (leftmostNode.numKeys == 0)
 	cursor.curNode = leftmostNode
+	cursor.curNode.page.WLock()
 	return &cursor, nil
 }
 
@@ -133,6 +134,8 @@ func (table *BTreeIndex) TableFindRange(startKey int64, endKey int64) ([]utils.E
 func (cursor *BTreeCursor) StepForward() (atEnd bool) {
 	// If the cursor is at the end of the node, go to the next node.
 	if cursor.cellnum+1 >= cursor.curNode.numKeys {
+		curPage := cursor.curNode.page
+		defer curPage.WUnlock()
 		// Get the next node's page number.
 		nextPN := cursor.curNode.rightSiblingPN
 		if nextPN < 0 {
@@ -152,6 +155,7 @@ func (cursor *BTreeCursor) StepForward() (atEnd bool) {
 		if cursor.cellnum == nextNode.numKeys {
 			return cursor.StepForward()
 		}
+		cursor.curNode.page.WLock()
 		return false
 	}
 	// Else, just move the cursor forward.
