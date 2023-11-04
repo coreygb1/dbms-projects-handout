@@ -56,6 +56,7 @@ func (node *LeafNode) search(key int64) int64 {
 func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 	/* SOLUTION {{{ */
 	// Get insert position.
+	node.unlockParent(false)
 	insertPos := node.search(key)
 	// Check if this is a duplicate entry.
 	if insertPos < node.numKeys && node.getKeyAt(insertPos) == key {
@@ -209,6 +210,7 @@ func (node *InternalNode) search(key int64) int64 {
 // insert finds the appropriate place in a leaf node to insert a new tuple.
 func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	// Insert the entry into the appropriate child node. Use getChildAt for the indexing
+	
 	node.unlockParent(false)
 	childIdx := node.search(key)
 	child, err := node.getAndLockChildAt(childIdx)
@@ -224,6 +226,7 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	// Insert a new key into our node if necessary.
 	if result.isSplit {
 		split := node.insertSplit(result)
+		node.unlockParent(true)
 		if !split.isSplit {
 			node.unlockParent(true)
 		}
