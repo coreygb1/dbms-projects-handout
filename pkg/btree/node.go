@@ -89,8 +89,8 @@ func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 		node.unlock()
 		return node.split()
 	}
-	node.unlockParent(true)
 	node.unlock()
+	node.unlockParent(true)
 	return Split{}
 	/* SOLUTION }}} */
 }
@@ -213,14 +213,13 @@ func (node *InternalNode) search(key int64) int64 {
 func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	// Insert the entry into the appropriate child node. Use getChildAt for the indexing
 	
-	if node.numKeys <= KEYS_PER_INTERNAL_NODE - 1{ ////
+	if node.numKeys <= KEYS_PER_INTERNAL_NODE - 1 { ////
 		node.unlockParent(false)
 	} ////
 	childIdx := node.search(key)
 	child, err := node.getAndLockChildAt(childIdx)
 	if err != nil {
-		node.unlockParent(true)
-		node.unlock()
+		child.getPage.RUnlock()
 		return Split{err: err}
 	}
 	node.initChild(child)
@@ -237,6 +236,7 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 		node.unlock()
 		return split
 	}
+	node.unlockParent(true)
 	return Split{err: result.err}
 }
 
