@@ -78,6 +78,8 @@ func (g *Graph) RemoveEdge(from *Transaction, to *Transaction) error {
 func (g *Graph) DetectCycle() bool {
 	g.RLock()
 	defer g.RUnlock()
+	
+
 	panic("function not yet implemented");
 }
 

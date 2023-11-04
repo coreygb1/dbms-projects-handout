@@ -90,7 +90,32 @@ func (tm *TransactionManager) Begin(clientId uuid.UUID) error {
 
 // Locks the given resource. Will return an error if deadlock is created.
 func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
-	panic("function not yet implemented")
+	// get the transaction and resrouce
+	tran, bool := tm.GetTransaction(uuid.UUID)
+	if !bool {
+		return errors.New("transaction doesn't exist")
+	}
+	resource := Resource{table, resourceKey}
+
+	// check if lock already exists. Do appropriate returns if so
+	lock_type, exists := tran.GetResources()[resource]
+	if exists {
+		if lType == 0 && lock_type == 1 {
+			return errors.New("requesting write lock over existing read lock")
+		} 
+		return nil
+	}
+
+	// find conflicts and add edges to the graph
+	conflicts := tm.discoverTransactions(resource, lType)
+	for i := 0; i<len(conflicts); i++ {
+		tran.pGraph.AddEdge(tran, conflicts[i])
+	}
+	if tran.pGraph.DetectCycle() {
+		return errors.New("Cycle detected")
+	}
+	tran.resources[resource] = LockType
+	lm.Lock(resource, LockType)
 }
 
 // Unlocks the given resource.
