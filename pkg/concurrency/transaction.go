@@ -110,6 +110,7 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	}
 
 	// find conflicts by adding and removing edges to the graph
+	tran.RUnlock()
 	tm.tmMtx.Lock()
 	conflicts := tm.discoverTransactions(resource, lType)
 	tran.WLock()
@@ -128,9 +129,9 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 		return errors.New("Cycle detected")
 	}
 	tran.resources[resource] = lType
-	tm.lm.Lock(resource, lType)
 	tran.WUnlock()
 	tm.tmMtx.Unlock()
+	tm.lm.Lock(resource, lType)
 	return nil
 }
 
