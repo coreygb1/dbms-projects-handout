@@ -194,7 +194,6 @@ func (table *BTreeIndex) Select() ([]utils.Entry, error) {
 			break
 		}
 	}
-
 	return entries, nil
 }
 

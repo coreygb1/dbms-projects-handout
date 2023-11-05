@@ -90,38 +90,66 @@ func (tm *TransactionManager) Begin(clientId uuid.UUID) error {
 
 // Locks the given resource. Will return an error if deadlock is created.
 func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
-	// get the transaction and resrouce
-// 	tran, bool := tm.GetTransaction(uuid.UUID)
-// 	if !bool {
-// 		return errors.New("transaction doesn't exist")
-// 	}
-// 	resource := Resource{table, resourceKey}
+	// get the transaction and resource with proper locking
+	tran, bool := tm.GetTransaction(clientId)
+	if !bool {
+		return errors.New("transaction doesn't exist")
+	}
+	tran.RLock()
+	resource := Resource{table.GetName(), resourceKey}
 
-// 	// check if lock already exists. Do appropriate returns if so
-// 	lock_type, exists := tran.GetResources()[resource]
-// 	if exists {
-// 		if lType == 0 && lock_type == 1 {
-// 			return errors.New("requesting write lock over existing read lock")
-// 		} 
-// 		return nil
-// 	}
+	// check if lock already exists. Do appropriate returns if so
+	lock_type, exists := tran.GetResources()[resource]
+	if exists {
+		if lType == 0 && lock_type == 1 {
+			tran.RUnlock()
+			return errors.New("requesting write lock over existing read lock")
+		} 
+		tran.RUnlock()
+		return nil
+	}
 
-// 	// find conflicts and add edges to the graph
-// 	conflicts := tm.discoverTransactions(resource, lType)
-// 	for i := 0; i<len(conflicts); i++ {
-// 		tran.pGraph.AddEdge(tran, conflicts[i])
-// 	}
-// 	if tran.pGraph.DetectCycle() {
-// 		return errors.New("Cycle detected")
-// 	}
-// 	tran.resources[resource] = LockType
-// 	lm.Lock(resource, LockType)
-	panic("function not yet implemented")
+	// find conflicts by adding and removing edges to the graph
+	tran.RUnlock()
+	conflicts := tm.discoverTransactions(resource, lType)
+	tran.WLock()
+	defer tran.WUnlock()
+	for i := 0; i<len(conflicts); i++ {
+		tm.pGraph.AddEdge(tran, conflicts[i])
+	}
+
+	cycle := tm.pGraph.DetectCycle()
+	
+	for i := 0; i<len(conflicts); i++ {
+		tm.pGraph.RemoveEdge(tran, conflicts[i])
+	}
+	
+	// either lock resource or return error
+	if cycle {
+		return errors.New("Cycle detected")
+	}
+	tran.resources[resource] = lType
+	tm.lm.Lock(resource, lType)
+	return nil
 }
 
 // Unlocks the given resource.
 func (tm *TransactionManager) Unlock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
-	panic("function not yet implemented")
+	tran, bool := tm.GetTransaction(clientId)
+	if !bool {
+		return errors.New("transaction doesn't exist")
+	}
+	tran.WLock()
+	defer tran.WUnlock()
+
+	resource := Resource{table.GetName(), resourceKey}
+	_, exists := tran.GetResources()[resource]
+	if exists {
+		tm.lm.Unlock(resource, lType)
+		delete(tran.resources, resource)
+		return nil
+	}
+	return errors.New("resource doesn't exist")
 }
 
 // Commits the given transaction and removes it from the running transactions list.

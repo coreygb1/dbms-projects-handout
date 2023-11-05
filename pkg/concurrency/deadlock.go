@@ -79,8 +79,31 @@ func (g *Graph) DetectCycle() bool {
 	g.RLock()
 	defer g.RUnlock()
 	
+	var seen []*Transaction
+	var check_txn *Transaction
+	var cycle bool
 
-	panic("function not yet implemented");
+	// for each edge, run dfs
+	for _,e := range g.edges {
+		check_txn = e.from
+		if !contains(seen, check_txn) {
+			seen = append(seen, check_txn)
+			cycle = dfs(g, check_txn, seen)
+		}
+		if cycle {
+			return true
+		}
+	}
+	return false
+}
+
+func contains(transactions []*Transaction, target *Transaction) bool {
+    for _, txn := range transactions {
+        if txn == target {
+            return true
+        }
+    }
+    return false
 }
 
 func dfs(g *Graph, from *Transaction, seen []*Transaction) bool {
