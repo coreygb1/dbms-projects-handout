@@ -102,15 +102,16 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	lock_type, exists := tran.GetResources()[resource]
 	if exists {
 		if lType == 0 && lock_type == 1 {
-			// tran.RUnlock()
+			tran.RUnlock()
 			return errors.New("requesting write lock over existing read lock")
 		} 
-		// tran.RUnlock()
+		tran.RUnlock()
 		return nil
 	}
 
 	// find conflicts by adding and removing edges to the graph
 	tran.RUnlock()
+	tm.tmMtx.RLock()
 	conflicts := tm.discoverTransactions(resource, lType)
 	tran.WLock()
 	defer tran.WUnlock()

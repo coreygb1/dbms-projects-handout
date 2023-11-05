@@ -229,7 +229,7 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 		if !split.isSplit {
 			node.unlockParent(true)
 		}
-		node.unlock()
+		// node.unlock()
 		return split
 	}
 	return Split{err: result.err}
