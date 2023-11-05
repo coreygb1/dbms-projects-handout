@@ -110,7 +110,7 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	}
 
 	// find conflicts by adding and removing edges to the graph
-	tm.tmMtx.Rlock()
+	tm.tmMtx.Lock()
 	conflicts := tm.discoverTransactions(resource, lType)
 	tran.WLock()
 	for i := 0; i<len(conflicts); i++ {
@@ -130,15 +130,13 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	tran.resources[resource] = lType
 	tm.lm.Lock(resource, lType)
 	tran.WUnlock()
-	tm.tmMtx.RUnlock()
+	tm.tmMtx.Unlock()
 	return nil
 }
 
 // Unlocks the given resource.
 func (tm *TransactionManager) Unlock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
-	tm.tmMtx.RLock()
 	tran, bool := tm.GetTransaction(clientId)
-	tm.tmMtx.RUnlock()
 	
 	if !bool {
 		return errors.New("transaction doesn't exist")
