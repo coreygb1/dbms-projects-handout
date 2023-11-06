@@ -107,12 +107,13 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 			tran.RUnlock()
 			return errors.New("requesting write lock over existing read lock")
 		} 
+		if lType == W_LOCK && lock_type == R_LOCK {
 		tran.RUnlock()
 		return nil
 	}
 
 	// find conflicts by adding and removing edges to the graph
-	tran.RUnlock()
+	// tran.RUnlock()
 	conflicts := tm.discoverTransactions(resource, lType)
 	for i := 0; i<len(conflicts); i++ {
 		tm.pGraph.AddEdge(tran, conflicts[i])
