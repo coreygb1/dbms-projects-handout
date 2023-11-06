@@ -88,6 +88,8 @@ func (tm *TransactionManager) Begin(clientId uuid.UUID) error {
 	return nil
 }
 
+
+
 // Locks the given resource. Will return an error if deadlock is created.
 func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
 	// get the transaction and resource with proper locking
@@ -95,7 +97,7 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	if !bool {
 		return errors.New("transaction doesn't exist")
 	}
-	tran.WLock()
+	tran.RLock()
 	resource := Resource{table.GetName(), resourceKey}
 
 	// check if lock already exists. Do appropriate returns if so
@@ -118,7 +120,7 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	}
 
 	// find conflicts by adding and removing edges to the graph
-	// tran.RUnlock()
+	tran.RUnlock()
 	conflicts := tm.discoverTransactions(resource, lType)
 	for i := 0; i<len(conflicts); i++ {
 		tm.pGraph.AddEdge(tran, conflicts[i])
@@ -140,6 +142,7 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	tm.lm.Lock(resource, lType)
 	return nil
 }
+
 
 // Unlocks the given resource.
 func (tm *TransactionManager) Unlock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
