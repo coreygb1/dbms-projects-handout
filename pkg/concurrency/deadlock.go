@@ -120,7 +120,18 @@ func (g *Graph) DetectCycle() bool {
 	return false
 }
 
+func (g *Graph) DetectCycle() bool {
+	g.RLock()
+	defer g.RUnlock()
 
+	seen := []*Transaction{}
+	for _, edges := range g.edges {
+		if dfs(g, edges.from, seen) {
+			return true
+		}
+	}
+	return false
+}
 
 
 func contains(transactions []*Transaction, target *Transaction) bool {
