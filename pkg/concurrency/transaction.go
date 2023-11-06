@@ -91,7 +91,10 @@ func (tm *TransactionManager) Begin(clientId uuid.UUID) error {
 // Locks the given resource. Will return an error if deadlock is created.
 func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
 	// get the transaction and resource with proper locking
+	tm.tmMtx.Lock()
 	tran, bool := tm.GetTransaction(clientId)
+	tm.tmMtx.Unlock()
+	
 	if !bool {
 		return errors.New("transaction doesn't exist")
 	}
@@ -137,7 +140,9 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 
 // Unlocks the given resource.
 func (tm *TransactionManager) Unlock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
+	tm.tmMtx.Lock()
 	tran, bool := tm.GetTransaction(clientId)
+	tm.tmMtx.Unlock()
 	
 	if !bool {
 		return errors.New("transaction doesn't exist")
