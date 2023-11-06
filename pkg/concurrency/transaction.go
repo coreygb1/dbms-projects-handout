@@ -93,9 +93,9 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	// get the transaction and resource with proper locking
 	tran, bool := tm.GetTransaction(clientId)
 	if !bool {
-		return errors.New("This transaction doesn't exist")
+		return errors.New("transaction doesn't exist")
 	}
-	tran.RLock()
+	tran.WLock()
 	resource := Resource{table.GetName(), resourceKey}
 
 	// check if lock already exists. Do appropriate returns if so
@@ -103,17 +103,15 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	if exists {
 		if lType == 0 && lock_type == 1 {
 			tran.RUnlock()
-			return errors.New("Cannot request write lock with existing read lock")
+			return errors.New("requesting write lock over existing read lock")
 		} 
 		tran.RUnlock()
 		return nil
 	}
 
 	// find conflicts by adding and removing edges to the graph
-	tran.RUnlock()
 	tm.tmMtx.Lock()
 	conflicts := tm.discoverTransactions(resource, lType)
-	tran.WLock()
 	for i := 0; i<len(conflicts); i++ {
 		tm.pGraph.AddEdge(tran, conflicts[i])
 	}
@@ -126,7 +124,7 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	
 	// either lock resource or return error
 	if cycle {
-		return errors.New("A cycle has been detected")
+		return errors.New("Cycle detected")
 	}
 	tran.resources[resource] = lType
 	tm.lm.Lock(resource, lType)
