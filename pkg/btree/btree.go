@@ -59,7 +59,11 @@ func (table *BTreeIndex) Find(key int64) (utils.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
+	// [CONCURRENCY] Lock and eventually unlock the root node.
+	lockRoot(rootPage)
 	rootNode := pageToNode(rootPage)
+	initRootNode(rootNode)
+	defer unsafeUnlockRoot(rootNode)
 	defer rootPage.Put()
 	// Insert the entry into the root node.
 	value, found := rootNode.get(key)
@@ -76,13 +80,19 @@ func (table *BTreeIndex) Insert(key int64, value int64) error {
 	if err != nil {
 		return err
 	}
+	// [CONCURRENCY] Lock and eventually unlock the root node.
+	lockRoot(rootPage)
 	rootNode := pageToNode(rootPage)
+	initRootNode(rootNode)
+	defer unsafeUnlockRoot(rootNode)
 	defer rootPage.Put()
 	// Insert the entry into the root node.
 	result := rootNode.insert(key, value, false)
 	// Check if we need to split the root node.
 	// Remember to preserve the invariant that the root node occupies page 0.
 	if result.isSplit {
+		// [CONCURRENCY] Unlock the root node.
+		defer SUPER_NODE.unlock()
 		// Ensure that our left PN hasn't changed.
 		if result.leftPN != 0 {
 			return errors.New("splitting was corrupted")
@@ -132,7 +142,11 @@ func (table *BTreeIndex) Update(key int64, value int64) error {
 	if err != nil {
 		return err
 	}
+	// [CONCURRENCY] Lock and eventually unlock the root node.
+	lockRoot(rootPage)
 	rootNode := pageToNode(rootPage)
+	initRootNode(rootNode)
+	defer unsafeUnlockRoot(rootNode)
 	defer rootPage.Put()
 	// Update the entry.
 	result := rootNode.insert(key, value, true)
@@ -146,7 +160,11 @@ func (table *BTreeIndex) Delete(key int64) error {
 	if err != nil {
 		return err
 	}
+	// [CONCURRENCY] Lock and eventually unlock the root node.
+	lockRoot(rootPage)
 	rootNode := pageToNode(rootPage)
+	initRootNode(rootNode)
+	defer unsafeUnlockRoot(rootNode)
 	defer rootPage.Put()
 	// Delete the key.
 	rootNode.delete(key)
