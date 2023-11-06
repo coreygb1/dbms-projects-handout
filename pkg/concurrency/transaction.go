@@ -95,7 +95,7 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	if !bool {
 		return errors.New("transaction doesn't exist")
 	}
-	tran.RLock()
+	tran.WLock()
 	resource := Resource{table.GetName(), resourceKey}
 
 	// check if lock already exists. Do appropriate returns if so
@@ -107,8 +107,14 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 			tran.RUnlock()
 			return errors.New("requesting write lock over existing read lock")
 		} 
-		tran.RUnlock()
-		return nil
+		if lType == R_LOCK && lock_type == W_LOCK {
+			tran.RUnlock()
+			return nil
+		} 
+		if lType == lock_type {
+			tran.RUnlock()
+			return nil
+		}
 	}
 
 	// find conflicts by adding and removing edges to the graph
