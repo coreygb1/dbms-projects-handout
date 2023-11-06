@@ -149,7 +149,7 @@ func (tm *TransactionManager) Unlock(clientId uuid.UUID, table db.Index, resourc
 	_, exists := tran.GetResources()[resource]
 	if exists {
 		tm.lm.Unlock(resource, lType)
-		delete(tran..GetResources(), resource)
+		delete(tran.GetResources(), resource)
 		return nil
 	}
 	return errors.New("resource doesn't exist")
