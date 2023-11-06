@@ -104,21 +104,24 @@ func (g *Graph) DetectCycle() bool {
 	visit := make(map[*Transaction]bool)
 
 	for _, edges := range g.edges {
-		for visit := range visited {
-			delete(visited, visit)
+		for v := range visit {
+			delete(visit, v)
 		}
 		seen := []*Transaction{}
 		
-		for t := range visited {
+		for t := range visit {
 			seen = append(seen, t)
 		}
-		if dfs(g, e.from, seen) {
+		if dfs(g, edges.from, seen) {
 			return true
 		}
 	}
 
 	return false
 }
+
+
+
 
 func contains(transactions []*Transaction, target *Transaction) bool {
     for _, txn := range transactions {
