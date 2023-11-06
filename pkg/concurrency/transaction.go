@@ -129,9 +129,9 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 		return errors.New("A cycle has been detected")
 	}
 	tran.resources[resource] = lType
+	tm.lm.Lock(resource, lType)
 	tran.WUnlock()
 	tm.tmMtx.Unlock()
-	tm.lm.Lock(resource, lType)
 	return nil
 }
 
