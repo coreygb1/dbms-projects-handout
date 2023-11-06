@@ -128,8 +128,8 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	}
 	tran.resources[resource] = lType
 	tm.lm.Lock(resource, lType)
-	tm.tmMtx.Unlock()
 	tran.WUnlock()
+	tm.tmMtx.Unlock()
 	return nil
 }
 
