@@ -75,25 +75,48 @@ func (g *Graph) RemoveEdge(from *Transaction, to *Transaction) error {
 
 *
 */
+// func (g *Graph) DetectCycle() bool {
+// 	g.RLock()
+// 	defer g.RUnlock()
+	
+// 	var seen []*Transaction
+// 	var check_txn *Transaction
+// 	var cycle bool
+
+// 	// for each edge, run dfs
+// 	for _,e := range g.edges {
+// 		check_txn = e.from
+// 		if !contains(seen, check_txn) {
+// 			seen = append(seen, check_txn)
+// 			cycle = dfs(g, check_txn, seen)
+// 		}
+// 		if cycle {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
+
 func (g *Graph) DetectCycle() bool {
 	g.RLock()
 	defer g.RUnlock()
-	
-	var seen []*Transaction
-	var check_txn *Transaction
-	var cycle bool
 
-	// for each edge, run dfs
-	for _,e := range g.edges {
-		check_txn = e.from
-		if !contains(seen, check_txn) {
-			seen = append(seen, check_txn)
-			cycle = dfs(g, check_txn, seen)
+	visit := make(map[*Transaction]bool)
+
+	for _, edges := range g.edges {
+		for visit := range visited {
+			delete(visited, visit)
 		}
-		if cycle {
+		seen := []*Transaction{}
+		
+		for t := range visited {
+			seen = append(seen, t)
+		}
+		if dfs(g, e.from, seen) {
 			return true
 		}
 	}
+
 	return false
 }
 
