@@ -103,7 +103,7 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	lock_type, exists := tran.GetResources()[resource]
 	tm.tmMtx.Unlock()
 	if exists {
-		if lType == 0 && lock_type == 1 {
+		if lType == W_LOCK && lock_type == R_LOCK {
 			tran.RUnlock()
 			return errors.New("requesting write lock over existing read lock")
 		} 
@@ -112,7 +112,7 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	}
 
 	// find conflicts by adding and removing edges to the graph
-	// tran.RUnlock()
+	tran.RUnlock()
 	conflicts := tm.discoverTransactions(resource, lType)
 	for i := 0; i<len(conflicts); i++ {
 		tm.pGraph.AddEdge(tran, conflicts[i])
