@@ -151,3 +151,19 @@ func (pager *Pager) FlushPage(page *Page) {
 func (pager *Pager) FlushAllPages() {
 	panic("function not yet implemented")
 }
+
+// [RECOVERY] Block all updates.
+func (pager *Pager) LockAllUpdates() {
+	pager.ptMtx.Lock()
+	for _, page := range pager.pageTable {
+		page.GetKey().(*Page).LockUpdates()
+	}
+}
+
+// [RECOVERY] Enable updates.
+func (pager *Pager) UnlockAllUpdates() {
+	for _, page := range pager.pageTable {
+		page.GetKey().(*Page).UnlockUpdates()
+	}
+	pager.ptMtx.Unlock()
+}

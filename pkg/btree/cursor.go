@@ -80,7 +80,6 @@ func (table *BTreeIndex) TableEnd() (utils.Cursor, error) {
 // If the key is not found, returns a cursor to the new insertion position.
 // Hint: use keyToNodeEntry
 func (table *BTreeIndex) TableFind(key int64) (utils.Cursor, error) {
-	/* SOLUTION {{{ */
 	cursor := BTreeCursor{table: table}
 	// Get the root page.
 	rootPage, err := table.pager.GetPage(table.rootPN)
@@ -99,7 +98,6 @@ func (table *BTreeIndex) TableFind(key int64) (utils.Cursor, error) {
 	cursor.isEnd = (cellnum == leaf.numKeys)
 	cursor.curNode = leaf
 	return &cursor, nil
-	/* SOLUTION }}} */
 }
 
 // TableFindRange returns a slice of Entries with keys between the startKey and endKey.
