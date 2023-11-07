@@ -92,29 +92,30 @@ func (tm *TransactionManager) Begin(clientId uuid.UUID) error {
 
 // Locks the given resource. Will return an error if deadlock is created.
 func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
-	// get resource & transaction
-	tm.tmMtx.RLock()
+	tm.tmMtx.RLock() 
 	tran, bool := tm.GetTransaction(clientId)
-	tm.tmMtx.RUnlock()
-
 	if !bool {
 		return errors.New("No existing transact")
 	}
 	resource := Resource{table.GetName(), resourceKey}
-	
-	// check if transaction exists
 	tran.RLock()
-	tm.tmMtx.Lock()
 	lock_type, exists := tran.GetResources()[resource]
-	tm.tmMtx.Unlock()
-
 	if exists {
 		if lType == W_LOCK && lock_type == R_LOCK {
 			tran.RUnlock()
+			tm.tmMtx.RUnlock()
 			return errors.New("requesting write lock over existing read lock")
 		} 
-		tran.RUnlock()
-		return nil
+		if lType == lock_type {
+			tran.RUnlock()
+			tm.tmMtx.RUnlock()
+			return nil
+		}
+		if lType == R_LOCK && lock_type == W_LOCK {
+			tran.RUnlock()
+			tm.tmMtx.RUnlock()
+			return nil
+		}
 	}
 	tran.RUnlock()
 
@@ -131,13 +132,14 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	}
 	// either lock resource or return error
 	if cycle {
+		tm.tmMtx.RUnlock()
 		return errors.New("Cycle detected")
 	}
 	tm.GetLockManager().Lock(resource, lType)
+	tm.tmMtx.RUnlock()
 	tran.WLock()
 	tran.GetResources()[resource] = lType
 	tran.WUnlock()
-	tm.tmMtx.Unlock()
 	return nil
 }
 
@@ -145,24 +147,24 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 // Unlocks the given resource.
 func (tm *TransactionManager) Unlock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
 	tm.tmMtx.RLock()
+	defer tm.tmMtx.RUnlock()
 	tran, bool := tm.GetTransaction(clientId)
-	tm.tmMtx.RUnlock()
-
+	
 	if !bool {
 		return errors.New("transaction doesn't exist")
 	}
-	tran.WLock()
+
 	resource := Resource{table.GetName(), resourceKey}
 	lock_type, exists := tran.GetResources()[resource]
+	tran.WLock()
+	defer tran.WUnlock()
 	if exists {
 		if lType != lock_type {
-			tran.WUnlock()
 			return errors.New("non-matching lock type")
 		}
 		tm.GetLockManager().Unlock(resource, lType)
 		delete(tran.GetResources(), resource)
 	}
-	tran.WUnlock()
 	return nil
 }
 
