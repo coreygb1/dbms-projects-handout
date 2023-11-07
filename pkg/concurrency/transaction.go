@@ -93,6 +93,7 @@ func (tm *TransactionManager) Begin(clientId uuid.UUID) error {
 // Locks the given resource. Will return an error if deadlock is created.
 func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
 	// get the transaction and resource with proper locking
+	tm.tmMtx.Lock()
 	tran, bool := tm.GetTransaction(clientId)
 	if !bool {
 		return errors.New("transaction doesn't exist")
@@ -106,15 +107,16 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	if exists {
 		if lType == W_LOCK && lock_type == R_LOCK {
 			tran.RUnlock()
+			tm.tmMtx.RUnlock()
 			return errors.New("requesting write lock over existing read lock")
 		} 
 		tran.RUnlock()
+		tm.tmMtx.RUnlock()
 		return nil
 	}
 	tran.RUnlock()
 
 	// find conflicts by adding and removing edges to the graph
-	tm.tmMtx.Lock()
 	conflicts := tm.discoverTransactions(resource, lType)
 	for i := 0; i<len(conflicts); i++ {
 		tm.pGraph.AddEdge(tran, conflicts[i])
@@ -141,22 +143,25 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 
 // Unlocks the given resource.
 func (tm *TransactionManager) Unlock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
+	tm.tmMtx.RLock()
 	tran, bool := tm.GetTransaction(clientId)
 	
 	if !bool {
 		return errors.New("transaction doesn't exist")
 	}
-	tran.WLock()
-	defer tran.WUnlock()
 
 	resource := Resource{table.GetName(), resourceKey}
 	_, exists := tran.GetResources()[resource]
+	tran.WLock()
+	defer tran.WUnlock()
 	if exists {
-		tm.lm.Unlock(resource, lType)
+		if lType != resource {
+			return errors.New("non-matching lock type")
+		}
+		tm.GetLockManager().Unlock(resource, lType)
 		delete(tran.GetResources(), resource)
-		return nil
 	}
-	return errors.New("resource doesn't exist")
+	return nil
 }
 
 // Commits the given transaction and removes it from the running transactions list.
