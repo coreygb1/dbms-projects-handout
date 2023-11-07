@@ -94,7 +94,6 @@ func (tm *TransactionManager) Begin(clientId uuid.UUID) error {
 func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
 	tm.tmMtx.RLock() 
 	tran, bool := tm.GetTransaction(clientId)
-	tm.tmMtx.RUnlock() 
 	if !bool {
 		return errors.New("No existing transact")
 	}
@@ -115,13 +114,12 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 		if lType == R_LOCK && lock_type == W_LOCK {
 			tran.RUnlock()
 			tm.tmMtx.RUnlock()
-			return errors.New("requesting write lock over existing read lock")
+			return nil
 		}
 	}
 	tran.RUnlock()
 
 	// find conflicts by adding and removing edges to the graph
-	tm.tmMtx.Lock() 
 	conflicts := tm.discoverTransactions(resource, lType)
 	for i := 0; i<len(conflicts); i++ {
 		tm.pGraph.AddEdge(conflicts[i], tran)
@@ -138,7 +136,7 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 		return errors.New("Cycle detected")
 	}
 	tm.GetLockManager().Lock(resource, lType)
-	tm.tmMtx.Unlock()
+	tm.tmMtx.RUnlock()
 	tran.WLock()
 	tran.GetResources()[resource] = lType
 	tran.WUnlock()
@@ -149,24 +147,26 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 // Unlocks the given resource.
 func (tm *TransactionManager) Unlock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
 	tm.tmMtx.RLock()
-	defer tm.tmMtx.RUnlock()
 	tran, bool := tm.GetTransaction(clientId)
 	
 	if !bool {
+		tm.tmMtx.RUnlock()
 		return errors.New("transaction doesn't exist")
 	}
 
 	resource := Resource{table.GetName(), resourceKey}
 	lock_type, exists := tran.GetResources()[resource]
-	tran.WLock()
-	defer tran.WUnlock()
 	if exists {
 		if lType != lock_type {
+			tran.WUnlock()
+			tm.tmMtx.RUnlock()
 			return errors.New("non-matching lock type")
 		}
 		tm.GetLockManager().Unlock(resource, lType)
 		delete(tran.GetResources(), resource)
 	}
+	tran.WUnlock()
+	tm.tmMtx.RUnlock()
 	return nil
 }
 
