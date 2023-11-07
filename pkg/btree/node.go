@@ -212,7 +212,7 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	childIdx := node.search(key)
 	child, err := node.getAndLockChildAt(childIdx)
 	if err != nil {
-		node.unlock()
+		// node.unlock()
 		return Split{err: err}
 	}
 	node.initChild(child)
