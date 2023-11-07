@@ -115,7 +115,7 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 		if lType == R_LOCK && lock_type == W_LOCK {
 			tran.RUnlock()
 			tm.tmMtx.RUnlock()
-			return nil
+			return errors.New("requesting write lock over existing read lock")
 		}
 	}
 	tran.RUnlock()
