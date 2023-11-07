@@ -5,6 +5,7 @@ import (
 	"io"
 	"sort"
 	"strconv"
+	"errors"
 
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
 )
@@ -207,17 +208,24 @@ func (node *InternalNode) search(key int64) int64 {
 // insert finds the appropriate place in a leaf node to insert a new tuple.
 func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	// Insert the entry into the appropriate child node. Use getChildAt for the indexing
+	node.unlockParent(false)
 	childIdx := node.search(key)
-	child, err := node.getChildAt(childIdx)
+	child, err := node.getAndLockChildAt(childIdx)
 	if err != nil {
+		node.unlock()
 		return Split{err: err}
 	}
+	node.initChild(child)
 	defer child.getPage().Put()
 	// Insert value into the child.
 	result := child.insert(key, value, update)
 	// Insert a new key into our node if necessary.
 	if result.isSplit {
 		split := node.insertSplit(result)
+		if !split.isSplit {
+			node.unlockParent(true)
+		}
+		node.unlock()
 		return split
 	}
 	return Split{err: result.err}
@@ -263,30 +271,34 @@ func (node *InternalNode) delete(key int64) {
 	child.delete(key)
 }
 
-// insert finds the appropriate place in a leaf node to insert a new tuple.
-func (node *InternalNode) insert(key int64, value int64, update bool) Split {
-	// Insert the entry into the appropriate child node. Use getChildAt for the indexing
-	node.unlockParent(false)
-	childIdx := node.search(key)
-	child, err := node.getAndLockChildAt(childIdx)
+
+// split is a helper function to split a leaf node, then propagate the split upwards.
+func (node *LeafNode) split() Split {
+	/* SOLUTION {{{ */
+	// Create a new leaf node to split our keys.
+	newNode, err := createLeafNode(node.page.GetPager())
 	if err != nil {
-		node.unlock()
 		return Split{err: err}
 	}
-	node.initChild(child)
-	defer child.getPage().Put()
-	// Insert value into the child.
-	result := child.insert(key, value, update)
-	// Insert a new key into our node if necessary.
-	if result.isSplit {
-		split := node.insertSplit(result)
-		if !split.isSplit {
-			node.unlockParent(true)
-		}
-		node.unlock()
-		return split
+	defer newNode.getPage().Put()
+	// Set the right sibling for our two nodes.
+	prevSiblingPN := node.setRightSibling(newNode.page.GetPageNum())
+	newNode.setRightSibling(prevSiblingPN)
+	// Transfer entries to the new node (plus the new entry) accordingly.
+	midpoint := node.numKeys / 2
+	for i := midpoint; i < node.numKeys; i++ {
+		newNode.updateKeyAt(newNode.numKeys, node.getKeyAt(i))
+		newNode.updateValueAt(newNode.numKeys, node.getValueAt(i))
+		newNode.updateNumKeys(newNode.numKeys + 1)
 	}
-	return Split{err: result.err}
+	node.updateNumKeys(midpoint)
+	return Split{
+		isSplit: true,
+		key:     newNode.getKeyAt(0), // Get the right node's first key
+		leftPN:  node.page.GetPageNum(),
+		rightPN: newNode.page.GetPageNum(),
+	}
+	/* SOLUTION }}} */
 }
 
 // get returns the value associated with a given key from the leaf node.
