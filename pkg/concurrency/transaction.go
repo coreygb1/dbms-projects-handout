@@ -140,7 +140,7 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 // Unlocks the given resource.
 func (tm *TransactionManager) Unlock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
 	tm.tmMtx.RLock()
-	defer tm.tmMtx.RUnlock
+	defer tm.tmMtx.RUnlock()
 	tran, bool := tm.GetTransaction(clientId)
 	
 	if !bool {
