@@ -94,6 +94,7 @@ func (tm *TransactionManager) Begin(clientId uuid.UUID) error {
 func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
 	tm.tmMtx.RLock() 
 	tran, bool := tm.GetTransaction(clientId)
+	tm.tmMtx.RUnlock() 
 	if !bool {
 		return errors.New("No existing transact")
 	}
@@ -120,6 +121,7 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	tran.RUnlock()
 
 	// find conflicts by adding and removing edges to the graph
+	tm.tmMtx.Lock() 
 	conflicts := tm.discoverTransactions(resource, lType)
 	for i := 0; i<len(conflicts); i++ {
 		tm.pGraph.AddEdge(conflicts[i], tran)
