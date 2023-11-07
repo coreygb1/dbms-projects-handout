@@ -272,29 +272,31 @@ func (node *InternalNode) delete(key int64) {
 }
 
 
-// split is a helper function to split a leaf node, then propagate the split upwards.
-func (node *LeafNode) split() Split {
+// split is a helper function that splits an internal node, then propagates the split upwards.
+func (node *InternalNode) split() Split {
 	/* SOLUTION {{{ */
-	// Create a new leaf node to split our keys.
-	newNode, err := createLeafNode(node.page.GetPager())
+	// Create a new internal node to split our keys.
+	newNode, err := createInternalNode(node.page.GetPager())
 	if err != nil {
 		return Split{err: err}
 	}
 	defer newNode.getPage().Put()
-	// Set the right sibling for our two nodes.
-	prevSiblingPN := node.setRightSibling(newNode.page.GetPageNum())
-	newNode.setRightSibling(prevSiblingPN)
-	// Transfer entries to the new node (plus the new entry) accordingly.
-	midpoint := node.numKeys / 2
-	for i := midpoint; i < node.numKeys; i++ {
-		newNode.updateKeyAt(newNode.numKeys, node.getKeyAt(i))
-		newNode.updateValueAt(newNode.numKeys, node.getValueAt(i))
-		newNode.updateNumKeys(newNode.numKeys + 1)
+	// Compute the midpoint based on the number of children to move.
+	midpoint := (node.numKeys - 1) / 2
+	// Transfer the keys to the new node.
+	for i := midpoint; i <= node.numKeys; i++ {
+		newNode.updatePNAt(newNode.numKeys, node.getPNAt(i))
+		if i < node.numKeys {
+			newNode.updateKeyAt(newNode.numKeys, node.getKeyAt(i))
+			newNode.updateNumKeys(newNode.numKeys + 1)
+		}
 	}
-	node.updateNumKeys(midpoint)
+	middleKey := node.getKeyAt(midpoint - 1)
+	node.updateNumKeys(midpoint - 1)
+	// Propagate the split.
 	return Split{
 		isSplit: true,
-		key:     newNode.getKeyAt(0), // Get the right node's first key
+		key:     middleKey,
 		leftPN:  node.page.GetPageNum(),
 		rightPN: newNode.page.GetPageNum(),
 	}
