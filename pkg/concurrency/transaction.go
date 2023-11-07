@@ -121,13 +121,13 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	// find conflicts by adding and removing edges to the graph
 	conflicts := tm.discoverTransactions(resource, lType)
 	for i := 0; i<len(conflicts); i++ {
-		tm.pGraph.AddEdge(conflicts[i], tran)
+		tm.pGraph.AddEdge(tran, conflicts[i])
 	}
 
 	cycle := tm.pGraph.DetectCycle()
 	
 	for i := 0; i<len(conflicts); i++ {
-		tm.pGraph.RemoveEdge(conflicts[i], tran)
+		tm.pGraph.RemoveEdge(tran, conflicts[i])
 	}
 	// either lock resource or return error
 	if cycle {
