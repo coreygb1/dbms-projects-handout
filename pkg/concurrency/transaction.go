@@ -99,14 +99,14 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	}
 	resource := Resource{table.GetName(), resourceKey}
 	tran.RLock()
-	lock_type, exists := tran.resources[resource]
+	lock_type, exists := tran.GetResources()[resource]
 	if exists {
 		if lType == W_LOCK && lock_type == R_LOCK {
 			tran.RUnlock()
 			tm.tmMtx.RUnlock()
 			return errors.New("requesting write lock over existing read lock")
 		} 
-		if ltype == lock_type {
+		if lType == lock_type {
 			tran.RUnlock()
 			tm.tmMtx.RUnlock()
 			return nil
@@ -138,7 +138,7 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	tm.GetLockManager().Lock(resource, lType)
 	tm.tmMtx.RUnlock()
 	tran.WLock()
-	tran.resources[resource] = lType
+	tran.GetResources()[resource] = lType
 	tran.WUnlock()
 	return nil
 }
@@ -155,7 +155,7 @@ func (tm *TransactionManager) Unlock(clientId uuid.UUID, table db.Index, resourc
 	}
 
 	resource := Resource{table.GetName(), resourceKey}
-	lock_type, exists := tran.resources[resource]
+	lock_type, exists := tran.GetResources()[resource]
 	tran.WLock()
 	defer tran.WUnlock()
 	if exists {
