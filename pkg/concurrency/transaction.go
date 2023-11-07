@@ -139,24 +139,25 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 // Unlocks the given resource.
 func (tm *TransactionManager) Unlock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
 	tm.tmMtx.RLock()
-	defer tm.tmMtx.RUnlock()
 	tran, bool := tm.GetTransaction(clientId)
-	
+	tm.tmMtx.RUnlock()
+
 	if !bool {
+		tran.WUnlock()
 		return errors.New("transaction doesn't exist")
 	}
-
+	tran.WLock()
 	resource := Resource{table.GetName(), resourceKey}
 	lock_type, exists := tran.GetResources()[resource]
-	tran.WLock()
-	defer tran.WUnlock()
 	if exists {
 		if lType != lock_type {
+			tran.WUnlock()
 			return errors.New("non-matching lock type")
 		}
 		tm.GetLockManager().Unlock(resource, lType)
 		delete(tran.GetResources(), resource)
 	}
+	tran.WUnlock()
 	return nil
 }
 
