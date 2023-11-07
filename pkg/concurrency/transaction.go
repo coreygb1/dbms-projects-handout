@@ -106,7 +106,7 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 			tm.tmMtx.RUnlock()
 			return errors.New("requesting write lock over existing read lock")
 		} 
-		if lType == lock_type {
+		if ltype == lock_type {
 			tran.RUnlock()
 			tm.tmMtx.RUnlock()
 			return nil
@@ -123,10 +123,15 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	conflicts := tm.discoverTransactions(resource, lType)
 	for i := 0; i<len(conflicts); i++ {
 		tm.pGraph.AddEdge(conflicts[i], tran)
-		defer tm.pGraph.RemoveEdge(conflicts[i], tran)
 	}
+
+	cycle := tm.pGraph.DetectCycle()
 	
-	if tm.pGraph.DetectCycle() {
+	for i := 0; i<len(conflicts); i++ {
+		tm.pGraph.RemoveEdge(conflicts[i], tran)
+	}
+	// either lock resource or return error
+	if cycle {
 		tm.tmMtx.RUnlock()
 		return errors.New("Cycle detected")
 	}
