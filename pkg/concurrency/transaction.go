@@ -151,11 +151,11 @@ func (tm *TransactionManager) Unlock(clientId uuid.UUID, table db.Index, resourc
 	}
 
 	resource := Resource{table.GetName(), resourceKey}
-	_, exists := tran.GetResources()[resource]
+	lock_type, exists := tran.resources[resource]
 	tran.WLock()
 	defer tran.WUnlock()
 	if exists {
-		if lType != resource {
+		if lType != lock_type {
 			return errors.New("non-matching lock type")
 		}
 		tm.GetLockManager().Unlock(resource, lType)
