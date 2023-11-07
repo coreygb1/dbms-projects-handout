@@ -143,7 +143,6 @@ func (tm *TransactionManager) Unlock(clientId uuid.UUID, table db.Index, resourc
 	tm.tmMtx.RUnlock()
 
 	if !bool {
-		tran.WUnlock()
 		return errors.New("transaction doesn't exist")
 	}
 	tran.WLock()
