@@ -1,7 +1,6 @@
 package btree
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"sort"
@@ -94,10 +93,6 @@ func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 	return Split{}
 	/* SOLUTION }}} */
 }
-
-
-
-
 
 // delete removes a given tuple from the leaf node, if the given key exists.
 func (node *LeafNode) delete(key int64) {
@@ -212,31 +207,21 @@ func (node *InternalNode) search(key int64) int64 {
 // insert finds the appropriate place in a leaf node to insert a new tuple.
 func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	// Insert the entry into the appropriate child node. Use getChildAt for the indexing
-	node.unlockParent(false)
 	childIdx := node.search(key)
-	child, err := node.getAndLockChildAt(childIdx)
+	child, err := node.getChildAt(childIdx)
 	if err != nil {
-		node.unlock()
 		return Split{err: err}
 	}
-	node.initChild(child)
 	defer child.getPage().Put()
 	// Insert value into the child.
 	result := child.insert(key, value, update)
 	// Insert a new key into our node if necessary.
 	if result.isSplit {
 		split := node.insertSplit(result)
-		if !split.isSplit {
-			node.unlockParent(true)
-		}
-		node.unlock()
 		return split
 	}
 	return Split{err: result.err}
 }
-
-
-
 
 // insertSplit inserts a split result into an internal node.
 // If this insertion results in another split, the split is cascaded upwards.
@@ -278,35 +263,30 @@ func (node *InternalNode) delete(key int64) {
 	child.delete(key)
 }
 
-// split is a helper function that splits an internal node, then propagates the split upwards.
-func (node *InternalNode) split() Split {
-	/* SOLUTION {{{ */
-	// Create a new internal node to split our keys.
-	newNode, err := createInternalNode(node.page.GetPager())
+// insert finds the appropriate place in a leaf node to insert a new tuple.
+func (node *InternalNode) insert(key int64, value int64, update bool) Split {
+	// Insert the entry into the appropriate child node. Use getChildAt for the indexing
+	node.unlockParent(false)
+	childIdx := node.search(key)
+	child, err := node.getAndLockChildAt(childIdx)
 	if err != nil {
+		node.unlock()
 		return Split{err: err}
 	}
-	defer newNode.getPage().Put()
-	// Compute the midpoint based on the number of children to move.
-	midpoint := (node.numKeys - 1) / 2
-	// Transfer the keys to the new node.
-	for i := midpoint; i <= node.numKeys; i++ {
-		newNode.updatePNAt(newNode.numKeys, node.getPNAt(i))
-		if i < node.numKeys {
-			newNode.updateKeyAt(newNode.numKeys, node.getKeyAt(i))
-			newNode.updateNumKeys(newNode.numKeys + 1)
+	node.initChild(child)
+	defer child.getPage().Put()
+	// Insert value into the child.
+	result := child.insert(key, value, update)
+	// Insert a new key into our node if necessary.
+	if result.isSplit {
+		split := node.insertSplit(result)
+		if !split.isSplit {
+			node.unlockParent(true)
 		}
+		node.unlock()
+		return split
 	}
-	middleKey := node.getKeyAt(midpoint - 1)
-	node.updateNumKeys(midpoint - 1)
-	// Propagate the split.
-	return Split{
-		isSplit: true,
-		key:     middleKey,
-		leftPN:  node.page.GetPageNum(),
-		rightPN: newNode.page.GetPageNum(),
-	}
-	/* SOLUTION }}} */
+	return Split{err: result.err}
 }
 
 // get returns the value associated with a given key from the leaf node.

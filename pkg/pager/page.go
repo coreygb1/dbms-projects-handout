@@ -105,4 +105,3 @@ func (page *Page) LockUpdates() {
 func (page *Page) UnlockUpdates() {
 	page.updateLock.Unlock()
 }
-

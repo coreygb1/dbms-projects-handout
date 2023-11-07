@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -17,8 +18,8 @@ import (
 // Page size - defaults to 4kb.
 const PAGESIZE = int64(directio.BlockSize)
 
-// Number of pages.
-const NUMPAGES = config.NumPages
+// Maximum number of pages.
+const MAXPAGES = config.NumPages
 
 // Pagers manage pages of data read from a file.
 type Pager struct {
@@ -32,14 +33,14 @@ type Pager struct {
 }
 
 // Construct a new Pager.
-func NewPager() *Pager {
-	var pager *Pager = &Pager{}
+func NewPager() (pager *Pager) {
+	pager = &Pager{}
 	pager.pageTable = make(map[int64]*list.Link)
 	pager.freeList = list.NewList()
 	pager.unpinnedList = list.NewList()
 	pager.pinnedList = list.NewList()
-	frames := directio.AlignedBlock(int(PAGESIZE * NUMPAGES))
-	for i := 0; i < NUMPAGES; i++ {
+	frames := directio.AlignedBlock(int(PAGESIZE * MAXPAGES))
+	for i := 0; i < MAXPAGES; i++ {
 		frame := frames[i*int(PAGESIZE) : (i+1)*int(PAGESIZE)]
 		page := Page{
 			pager:    pager,
@@ -54,22 +55,22 @@ func NewPager() *Pager {
 }
 
 // HasFile checks if the pager is backed by disk.
-func (pager *Pager) HasFile() bool {
+func (pager *Pager) HasFile() (hasFile bool) {
 	return pager.file != nil
 }
 
 // GetFileName returns the file name.
-func (pager *Pager) GetFileName() string {
-	return pager.file.Name()
+func (pager *Pager) GetFileName() (filename string) {
+	return filepath.Base(pager.file.Name())
 }
 
 // GetNumPages returns the number of pages.
-func (pager *Pager) GetNumPages() int64 {
+func (pager *Pager) GetNumPages() (numPages int64) {
 	return pager.maxPageNum
 }
 
 // GetFreePN returns the next available page number.
-func (pager *Pager) GetFreePN() int64 {
+func (pager *Pager) GetFreePN() (nextPN int64) {
 	// Assign the first page number beyond the end of the file.
 	return pager.maxPageNum
 }
@@ -121,7 +122,7 @@ func (pager *Pager) Close() (err error) {
 }
 
 // Populate a page's data field, given a pagenumber.
-func (pager *Pager) ReadPageFromDisk(page *Page, pagenum int64) error {
+func (pager *Pager) ReadPageFromDisk(page *Page, pagenum int64) (err error) {
 	if _, err := pager.file.Seek(pagenum*PAGESIZE, 0); err != nil {
 		return err
 	}
