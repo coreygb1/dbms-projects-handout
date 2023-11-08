@@ -122,15 +122,11 @@ func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceK
 	conflicts := tm.discoverTransactions(resource, lType)
 	for i := 0; i<len(conflicts); i++ {
 		tm.pGraph.AddEdge(tran, conflicts[i])
+		defer tm.pGraph.RemoveEdge(tran, conflicts[i])
 	}
 
-	cycle := tm.pGraph.DetectCycle()
-	
-	for i := 0; i<len(conflicts); i++ {
-		tm.pGraph.RemoveEdge(tran, conflicts[i])
-	}
 	// either lock resource or return error
-	if cycle {
+	if tm.pGraph.DetectCycle() {
 		tm.tmMtx.RUnlock()
 		return errors.New("Cycle detected")
 	}
