@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -60,7 +61,7 @@ func (pager *Pager) HasFile() bool {
 
 // GetFileName returns the file name.
 func (pager *Pager) GetFileName() string {
-	return pager.file.Name()
+	return filepath.Base(pager.file.Name())
 }
 
 // GetNumPages returns the number of pages.
