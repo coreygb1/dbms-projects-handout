@@ -3,25 +3,30 @@ package main
 import (
 	"flag"
 	"fmt"
+
 	"log"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/csci1270-fall-2023/dbms-projects-handout/pkg/concurrency"
 	config "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/config"
-	db "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/db"
 	list "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/list"
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
-	"github.com/csci1270-fall-2023/dbms-projects-handout/pkg/query"
 	repl "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/repl"
+
+	concurrency "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/concurrency"
+	db "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/db"
+	query "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/query"
+	recovery "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/recovery"
 
 	uuid "github.com/google/uuid"
 )
 
 // Default port 8335 (BEES).
 const DEFAULT_PORT int = 8335
+
+const LOG_FILE_NAME = "data/bumble.log"
 
 // [BTREE]
 // Listens for SIGINT or SIGTERM and calls table.CloseDB().
@@ -89,11 +94,11 @@ func main() {
 	}
 
 	// [RECOVERY]
-	// // Set up the log file.
-	// err = database.CreateLogFile()
-	// if err != nil {
-	// 	panic(err)
-	// }
+	// Set up the log file.
+	err = database.CreateLogFile(LOG_FILE_NAME)
+	if err != nil {
+		panic(err)
+	}
 
 	// [BTREE]
 	// Setup close conditions.
@@ -109,7 +114,7 @@ func main() {
 	server := false
 
 	// [RECOVERY]
-	// var rm *recovery.RecoveryManager
+	var rm *recovery.RecoveryManager
 
 	// Get the right REPLs.
 	switch *projectFlag {
@@ -145,18 +150,18 @@ func main() {
 		repls = append(repls, concurrency.TransactionREPL(database, tm))
 
 	// [RECOVERY]
-	// case "recovery":
-	// 	server = true
-	// 	lm := concurrency.NewLockManager()
-	// 	tm = concurrency.NewTransactionManager(lm)
-	// 	rm, err = recovery.NewRecoveryManager(database, tm)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 		return
-	// 	}
-	// 	repls = append(repls, recovery.RecoveryREPL(database, tm, rm))
-	// 	// Recover in this case!
-	// 	rm.Recover()
+	case "recovery":
+		server = true
+		lm := concurrency.NewLockManager()
+		tm = concurrency.NewTransactionManager(lm)
+		rm, err = recovery.NewRecoveryManager(database, tm, LOG_FILE_NAME)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		repls = append(repls, recovery.RecoveryREPL(database, tm, rm))
+		// Recover in this case!
+		rm.Recover()
 
 	default:
 		fmt.Println("must specify -project [go,pager,db,query,concurrency,recovery]")

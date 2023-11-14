@@ -91,7 +91,7 @@ func (tm *TransactionManager) Begin(clientId uuid.UUID) error {
 
 // Locks the given resource. Will return an error if deadlock is created.
 func (tm *TransactionManager) Lock(clientId uuid.UUID, table db.Index, resourceKey int64, lType LockType) error {
-	tm.tmMtx.RLock() 
+	tm.tmMtx.RLock()
 	tran, bool := tm.GetTransaction(clientId)
 	if !bool {
 		return errors.New("No existing transact")

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	btree "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/btree"
+	hash "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/hash"
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
 	utils "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/utils"
 )
@@ -102,11 +103,11 @@ func (db *Database) createTable(name string, indexType IndexType) (index Index, 
 		if err != nil {
 			return nil, err
 		}
-	// case HashIndexType:
-	// 	index, err = hash.OpenTable(path)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
+	case HashIndexType:
+		index, err = hash.OpenTable(path)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, errors.New("invalid index type")
 	}

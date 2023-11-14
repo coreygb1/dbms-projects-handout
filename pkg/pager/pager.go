@@ -60,7 +60,7 @@ func (pager *Pager) HasFile() (hasFile bool) {
 }
 
 // GetFileName returns the file name.
-func (pager *Pager) GetFileName() (filename string) {
+func (pager *Pager) GetFileName() string {
 	return filepath.Base(pager.file.Name())
 }
 
@@ -230,6 +230,14 @@ func (pager *Pager) FlushAllPages() {
 	pager.pinnedList.Map(writer)
 	pager.unpinnedList.Map(writer)
 	/* SOLUTION }}} */
+}
+
+// [RECOVERY] Block all updates.
+func (pager *Pager) LockAllUpdates() {
+	pager.ptMtx.Lock()
+	for _, page := range pager.pageTable {
+		page.GetKey().(*Page).LockUpdates()
+	}
 }
 
 // [RECOVERY] Block all updates.
