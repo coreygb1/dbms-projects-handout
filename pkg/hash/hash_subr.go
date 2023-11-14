@@ -18,7 +18,7 @@ var NUM_KEYS_OFFSET int64 = DEPTH_OFFSET + DEPTH_SIZE
 var NUM_KEYS_SIZE int64 = binary.MaxVarintLen64
 var BUCKET_HEADER_SIZE int64 = DEPTH_SIZE + NUM_KEYS_SIZE
 var ENTRYSIZE int64 = binary.MaxVarintLen64 * 2                    // int64 key, int64 value
-var BUCKETSIZE int64 = (PAGESIZE-BUCKET_HEADER_SIZE)/ENTRYSIZE - 1 // num entries
+var BUCKETSIZE int64 = (PAGESIZE - BUCKET_HEADER_SIZE) / ENTRYSIZE // num entries
 
 // Lock Types
 type BucketLockType int
@@ -56,46 +56,46 @@ func Hasher(key int64, depth int64) int64 {
 }
 
 // Get the byte-position of the cell with the given index.
-func entryPos(index int64) int64 {
+func cellPos(index int64) int64 {
 	return BUCKET_HEADER_SIZE + index*ENTRYSIZE
 }
 
 // Write the given entry into the given index.
-func (bucket *HashBucket) modifyEntry(index int64, entry HashEntry) {
+func (bucket *HashBucket) modifyCell(index int64, entry HashEntry) {
 	newdata := entry.Marshal()
-	startPos := entryPos(index)
+	startPos := cellPos(index)
 	bucket.page.Update(newdata, startPos, ENTRYSIZE)
 }
 
 // Get the entry at the given index.
-func (bucket *HashBucket) getEntry(index int64) HashEntry {
-	startPos := entryPos(index)
+func (bucket *HashBucket) getCell(index int64) HashEntry {
+	startPos := cellPos(index)
 	entry := unmarshalEntry((*bucket.page.GetData())[startPos : startPos+ENTRYSIZE])
 	return entry
 }
 
 // Get the key at the given index.
 func (bucket *HashBucket) getKeyAt(index int64) int64 {
-	return bucket.getEntry(index).GetKey()
+	return bucket.getCell(index).GetKey()
 }
 
 // Update the key at the given index.
 func (bucket *HashBucket) updateKeyAt(index int64, key int64) {
-	entry := bucket.getEntry(index)
+	entry := bucket.getCell(index)
 	entry.SetKey(key)
-	bucket.modifyEntry(index, entry)
+	bucket.modifyCell(index, entry)
 }
 
 // Get the value at the given index.
 func (bucket *HashBucket) getValueAt(index int64) int64 {
-	return bucket.getEntry(index).GetValue()
+	return bucket.getCell(index).GetValue()
 }
 
 // Update the value at the given index.
 func (bucket *HashBucket) updateValueAt(index int64, value int64) {
-	entry := bucket.getEntry(index)
+	entry := bucket.getCell(index)
 	entry.SetValue(value)
-	bucket.modifyEntry(index, entry)
+	bucket.modifyCell(index, entry)
 }
 
 // Update this bucket's depth.

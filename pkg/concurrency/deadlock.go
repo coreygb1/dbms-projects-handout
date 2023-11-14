@@ -63,40 +63,26 @@ func (g *Graph) RemoveEdge(from *Transaction, to *Transaction) error {
 	return errors.New("edge not found")
 }
 
-/*
-  - We want to create the graph to detect the deadlocks. This function will be used for
-    checking the lock in Transaction Manager.
-
-    1. Get all the transaction to the graph
-    2. Construct union-find array
-    3. Iterate through edges, applying DFS
-
-    Return : true if a cycle exists; false otherwise.
-
-*
-*/
-
-func (g *Graph) DetectCycle() bool {
+// Return true if a cycle exists; false otherwise.
+func (g *Graph) DetectCycle() (hasCycle bool) {
 	g.RLock()
 	defer g.RUnlock()
+	/* SOLUTION {{{ */
+	// Get all transactions in the graph.
+	tSet := make(map[*Transaction]bool)
+	for _, e := range g.edges {
+		tSet[e.from] = true
+		tSet[e.to] = true
+	}
 
-	seen := []*Transaction{}
-	for _, edges := range g.edges {
-		if dfs(g, edges.from, seen) {
+	for k := range tSet {
+		if dfs(g, k, make([]*Transaction, 0)) {
 			return true
 		}
 	}
+
 	return false
-}
-
-
-func contains(transactions []*Transaction, target *Transaction) bool {
-    for _, txn := range transactions {
-        if txn == target {
-            return true
-        }
-    }
-    return false
+	/* SOLUTION }}} */
 }
 
 func dfs(g *Graph, from *Transaction, seen []*Transaction) bool {

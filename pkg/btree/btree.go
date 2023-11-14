@@ -173,7 +173,7 @@ func (table *BTreeIndex) Delete(key int64) error {
 
 // Select returns a slice of all entries in the table.
 func (table *BTreeIndex) Select() ([]utils.Entry, error) {
-	// Use a cursor to traverse the table from start to end.
+	// Use a cursor to traverse the table from start to end
 	entries := make([]utils.Entry, 0)
 	cursor, err := table.TableStart()
 	if err != nil {
@@ -194,6 +194,7 @@ func (table *BTreeIndex) Select() ([]utils.Entry, error) {
 			break
 		}
 	}
+
 	return entries, nil
 }
 
@@ -218,4 +219,3 @@ func (table *BTreeIndex) PrintPN(pagenum int, w io.Writer) {
 	node := pageToNode(page)
 	node.printNode(w, "", "")
 }
-

@@ -17,6 +17,7 @@ type HashCursor struct {
 // TableStart returns a cursor to the first entry in the hash table.
 func (table *HashIndex) TableStart() (utils.Cursor, error) {
 	cursor := HashCursor{table: table, cellnum: 0}
+
 	curPage, err := table.pager.GetPage(ROOT_PN)
 	if err != nil {
 		return nil, err
@@ -70,6 +71,6 @@ func (cursor *HashCursor) GetEntry() (utils.Entry, error) {
 	if cursor.isEnd {
 		return HashEntry{}, errors.New("getEntry: entry is non-existent")
 	}
-	entry := cursor.curBucket.getEntry(cursor.cellnum)
+	entry := cursor.curBucket.getCell(cursor.cellnum)
 	return entry, nil
 }

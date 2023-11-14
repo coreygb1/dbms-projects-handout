@@ -1,11 +1,11 @@
 package btree
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"sort"
 	"strconv"
-	"errors"
 
 	pager "github.com/csci1270-fall-2023/dbms-projects-handout/pkg/pager"
 )
@@ -41,6 +41,7 @@ type Node interface {
 // search returns the first index where key >= given key.
 // If no key satisfies this condition, returns numKeys.
 func (node *LeafNode) search(key int64) int64 {
+	/* SOLUTION {{{ */
 	// Binary search for the key.
 	minIndex := sort.Search(
 		int(node.numKeys),
@@ -49,31 +50,30 @@ func (node *LeafNode) search(key int64) int64 {
 		},
 	)
 	return int64(minIndex)
+	/* SOLUTION }}} */
 }
 
-// // insert finds the appropriate place in a leaf node to insert a new tuple.
-// // if update is true, allow overwriting existing keys. else, error.
+// insert finds the appropriate place in a leaf node to insert a new tuple.
+// if update is true, allow overwriting existing keys. else, error.
 func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 	/* SOLUTION {{{ */
+	node.unlockParent(false)
+	defer node.unlock()
 	// Get insert position.
 	insertPos := node.search(key)
 	// Check if this is a duplicate entry.
 	if insertPos < node.numKeys && node.getKeyAt(insertPos) == key {
+		defer node.unlockParent(true)
 		if update {
 			node.updateValueAt(insertPos, value)
-			node.unlockParent(true)
-			node.unlock()
 			return Split{}
 		} else {
-			node.unlockParent(true)
-			node.unlock()
 			return Split{err: errors.New("cannot insert duplicate key")}
 		}
 	}
 	// Return an error if we're updating a non-existent entry.
 	if update {
 		node.unlockParent(true)
-		node.unlock()
 		return Split{err: errors.New("cannot update non-existent entry")}
 	}
 	// Shift entries to the right if needed.
@@ -85,12 +85,10 @@ func (node *LeafNode) insert(key int64, value int64, update bool) Split {
 	// Modify the Entry at this position.
 	node.modifyEntry(insertPos, BTreeEntry{key: key, value: value})
 	// Check if we need to split the node.
-	if node.numKeys >= ENTRIES_PER_LEAF_NODE {
-		node.unlock()
+	if node.numKeys > ENTRIES_PER_LEAF_NODE {
 		return node.split()
 	}
 	node.unlockParent(true)
-	node.unlock()
 	return Split{}
 	/* SOLUTION }}} */
 }
@@ -175,8 +173,8 @@ func (node *LeafNode) printNode(w io.Writer, firstPrefix string, prefix string) 
 	io.WriteString(w, fmt.Sprintf("%v[%v] %v%v size: %v\n",
 		firstPrefix, node.page.GetPageNum(), nodeType, isRoot, numKeys))
 	// Print entries.
-	for cellnum := int64(0); cellnum < node.numKeys; cellnum++ {
-		entry := node.getEntry(cellnum)
+	for Entrynum := int64(0); Entrynum < node.numKeys; Entrynum++ {
+		entry := node.getEntry(Entrynum)
 		io.WriteString(w, fmt.Sprintf("%v |--> (%v, %v)\n",
 			prefix, entry.GetKey(), entry.GetValue()))
 	}
@@ -195,6 +193,7 @@ func (node *LeafNode) printNode(w io.Writer, firstPrefix string, prefix string) 
 // search returns the first index where key > given key.
 // If no such index exists, it returns numKeys.
 func (node *InternalNode) search(key int64) int64 {
+	/* SOLUTION {{{ */
 	// Binary search for the key.
 	minIndex := sort.Search(
 		int(node.numKeys),
@@ -203,11 +202,13 @@ func (node *InternalNode) search(key int64) int64 {
 		},
 	)
 	return int64(minIndex)
+	/* SOLUTION }}} */
 }
 
 // insert finds the appropriate place in a leaf node to insert a new tuple.
 func (node *InternalNode) insert(key int64, value int64, update bool) Split {
-	// Insert the entry into the appropriate child node. Use getChildAt for the indexing
+	/* SOLUTION {{{ */
+	// Insert the entry into the appropriate child node.
 	node.unlockParent(false)
 	childIdx := node.search(key)
 	child, err := node.getAndLockChildAt(childIdx)
@@ -221,13 +222,14 @@ func (node *InternalNode) insert(key int64, value int64, update bool) Split {
 	// Insert a new key into our node if necessary.
 	if result.isSplit {
 		split := node.insertSplit(result)
+		defer node.unlock()
 		if !split.isSplit {
 			node.unlockParent(true)
 		}
-		node.unlock()
 		return split
 	}
 	return Split{err: result.err}
+	/* SOLUTION }}} */
 }
 
 // insertSplit inserts a split result into an internal node.
@@ -248,7 +250,7 @@ func (node *InternalNode) insertSplit(split Split) Split {
 	node.updatePNAt(insertPos+1, split.rightPN)
 	node.updateNumKeys(node.numKeys + 1)
 	// Check if we need to split.
-	if node.numKeys >= KEYS_PER_INTERNAL_NODE {
+	if node.numKeys > KEYS_PER_INTERNAL_NODE {
 		return node.split()
 	}
 	return Split{}
@@ -269,7 +271,6 @@ func (node *InternalNode) delete(key int64) {
 	// Delete from child.
 	child.delete(key)
 }
-
 
 // split is a helper function that splits an internal node, then propagates the split upwards.
 func (node *InternalNode) split() Split {
@@ -318,7 +319,7 @@ func (node *InternalNode) get(key int64) (value int64, found bool) {
 }
 
 // keyToNodeEntry is a helper function to create cursors that point to a given index within a leaf node.
-func (node *InternalNode) keyToNodeEntry(key int64) (*LeafNode, int64, error) {
+func (node *InternalNode) keyToNodeEntry(key int64) (n *LeafNode, idx int64, err error) {
 	index := node.search(key)
 	child, err := node.getChildAt(index)
 	if err != nil {

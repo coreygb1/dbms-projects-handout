@@ -84,6 +84,7 @@ func (table *HashTable) Find(key int64) (utils.Entry, error) {
 		table.RUnlock()
 		return nil, err
 	}
+	// bucket.RLock()
 	table.RUnlock()
 	defer bucket.page.Put()
 
@@ -124,16 +125,16 @@ func (table *HashTable) Split(bucket *HashBucket, hash int64) error {
 	// Move entries over to it.
 	tmpEntries := make([]HashEntry, bucket.numKeys)
 	for i := int64(0); i < bucket.numKeys; i++ {
-		tmpEntries[i] = bucket.getEntry(i)
+		tmpEntries[i] = bucket.getCell(i)
 	}
 	oldNKeys := int64(0)
 	newNKeys := int64(0)
 	for _, entry := range tmpEntries {
 		if Hasher(entry.GetKey(), bucket.depth) == newHash {
-			newBucket.modifyEntry(newNKeys, entry)
+			newBucket.modifyCell(newNKeys, entry)
 			newNKeys++
 		} else {
-			bucket.modifyEntry(oldNKeys, entry)
+			bucket.modifyCell(oldNKeys, entry)
 			oldNKeys++
 		}
 	}
@@ -163,11 +164,11 @@ func (table *HashTable) Insert(key int64, value int64) error {
 	defer table.WUnlock()
 	hash := Hasher(key, table.depth)
 	bucket, err := table.GetAndLockBucket(hash, WRITE_LOCK)
-	defer bucket.WUnlock()
 	if err != nil {
 		return err
 	}
 	defer bucket.page.Put()
+	defer bucket.WUnlock()
 	split, err := bucket.Insert(key, value)
 	if err != nil {
 		return err
@@ -215,23 +216,23 @@ func (table *HashTable) Delete(key int64) error {
 func (table *HashTable) Select() ([]utils.Entry, error) {
 	/* SOLUTION {{{ */
 	table.RLock()
+	defer table.RUnlock()
 	ret := make([]utils.Entry, 0)
 	for i := int64(0); i < table.pager.GetNumPages(); i++ {
 		bucket, err := table.GetAndLockBucketByPN(i, READ_LOCK)
 		if err != nil {
-			table.RUnlock()
+			bucket.RUnlock()
 			return nil, err
 		}
 		entries, err := bucket.Select()
 		bucket.GetPage().Put()
 		if err != nil {
-			table.RUnlock()
+			bucket.RUnlock()
 			return nil, err
 		}
-		ret = append(ret, entries...)
 		bucket.RUnlock()
+		ret = append(ret, entries...)
 	}
-	table.RUnlock()
 	return ret, nil
 	/* SOLUTION }}} */
 }
