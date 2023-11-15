@@ -66,28 +66,64 @@ func (rm *RecoveryManager) Table(tblType string, tblName string) {
 func (rm *RecoveryManager) Edit(clientId uuid.UUID, table db.Index, action Action, key int64, oldval int64, newval int64) {
 	rm.mtx.Lock()
 	defer rm.mtx.Unlock()
-	panic("function not yet implemented")
+	el := editLog{
+		id: clientId,
+		tablename: table,
+		action: action,
+		key: key,
+		oldval: oldval,
+		newval: newval
+	}
+	rm.writeToBuffer(el.toString())
+	txStack[clientId] = append(txStack[clientId], el)
+}
+
+type editLog struct {
+	id        uuid.UUID // The id of the transaction this edit was done in
+	tablename string    // The name of the table where the edit took place
+	action    Action    // The type of edit action taken
+	key       int64     // The key of the tuple that was edited
+	oldval    int64     // The old value before the edit
+	newval    int64     // The new value after the edit
 }
 
 // Write a transaction start log.
 func (rm *RecoveryManager) Start(clientId uuid.UUID) {
 	rm.mtx.Lock()
 	defer rm.mtx.Unlock()
-	panic("function not yet implemented")
+	sl := startLog {
+		id: clientId
+	}
+	rm.writeToBuffer(sl.toString())
+	txStack[clientId] := []Log{sl}
 }
 
 // Write a transaction commit log.
 func (rm *RecoveryManager) Commit(clientId uuid.UUID) {
 	rm.mtx.Lock()
 	defer rm.mtx.Unlock()
-	panic("function not yet implemented")
+	cl := commitLog {
+		id: clientId
+	}
+	rm.writeToBuffer(cl.toString())
+	delete(txStack, clientId)
 }
 
 // Flush all pages to disk and write a checkpoint log.
 func (rm *RecoveryManager) Checkpoint() {
 	rm.mtx.Lock()
 	defer rm.mtx.Unlock()
-	panic("function not yet implemented")
+	cpl := checkpointLog {
+		id: clientId
+	}
+	for table in rm.d.GetTables() {
+		table.GetPager().LockAllUpdates()
+		table.GetPager().FlushAllPages()
+		table.GetPager().UnlockAllUpdates()
+	}
+	
+	rm.writeToBuffer(cpl.toString())
+	txStack[clientId] = append(txStack[clientId], cpl)
 	rm.Delta() // Sorta-semi-pseudo-copy-on-write (to ensure db recoverability)
 }
 
