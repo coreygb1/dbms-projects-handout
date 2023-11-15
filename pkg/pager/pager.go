@@ -240,14 +240,6 @@ func (pager *Pager) LockAllUpdates() {
 	}
 }
 
-// [RECOVERY] Block all updates.
-func (pager *Pager) LockAllUpdates() {
-	pager.ptMtx.Lock()
-	for _, page := range pager.pageTable {
-		page.GetKey().(*Page).LockUpdates()
-	}
-}
-
 // [RECOVERY] Enable updates.
 func (pager *Pager) UnlockAllUpdates() {
 	for _, page := range pager.pageTable {
