@@ -274,7 +274,6 @@ func (rm *RecoveryManager) Recover() error {
 					return err
 				}
 			}
-		// Step 4: 
 		case *startLog: 
 			rm.tm.Commit(log.id) // remove from transaction list
     	}
@@ -282,7 +281,8 @@ func (rm *RecoveryManager) Recover() error {
 	return nil
 
 	///// Remaining questions:
-	// Do I use 'Start' and 'Commit' correctly?
+	// Do I use 'Start', 'begin' and 'Commit' correctly? 
+	// Do I need to do anything else for step 4?
 	// Is this a correct understanding of active transactions?
 
 }
