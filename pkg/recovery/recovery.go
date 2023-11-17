@@ -66,7 +66,7 @@ func (rm *RecoveryManager) Table(tblType string, tblName string) {
 func (rm *RecoveryManager) Edit(clientId uuid.UUID, table db.Index, action Action, key int64, oldval int64, newval int64) {
 	rm.mtx.Lock()
 	defer rm.mtx.Unlock()
-	el := &editLog{
+	el := editLog{
 		id: clientId,
 		tablename: table.GetName(),
 		action: action,
@@ -75,18 +75,19 @@ func (rm *RecoveryManager) Edit(clientId uuid.UUID, table db.Index, action Actio
 		newval: newval,
 	}
 	rm.writeToBuffer(el.toString())
-	rm.txStack[clientId] = append(rm.txStack[clientId], el)
+	rm.txStack[clientId] = append(rm.txStack[clientId], &el)
 }
 
 // Write a transaction start log.
 func (rm *RecoveryManager) Start(clientId uuid.UUID) {
 	rm.mtx.Lock()
 	defer rm.mtx.Unlock()
-	sl := &startLog{
+	sl := startLog{
 		id: clientId,
 	}
 	rm.writeToBuffer(sl.toString())
-	rm.txStack[clientId] = append(rm.txStack[clientId], sl)
+	rm.txStack[clientId] = []Log{}
+	rm.txStack[clientId] = append(rm.txStack[clientId], &sl)
 }
 
 // Write a transaction commit log.
@@ -199,8 +200,87 @@ func (rm *RecoveryManager) Undo(log Log) error {
 
 // Do a full recovery to the most recent checkpoint on startup.
 func (rm *RecoveryManager) Recover() error {
-	panic("function not yet implemented")
+	logs, checkpointPos, err := rm.readLogs()
+	
+	if err != nil {
+		return err
+	}
+
+	///// Step 1: Get a list of all active transactions
+
+	// If a checkpoint exists, start list with a list of active transactions contained
+	// in the checkpoint log
+	var activeTran []uuid.UUID
+	if _, isCheckpoint := logs[checkpointPos].(*checkpointLog); isCheckpoint {
+			activeTran = append(activeTran, logs[checkpointPos].ids...)
+	}
+
+	// append logs that started after the checkpoint and remove logs that commit after 
+	// the checkpoint
+	for i := checkpointPos; i < len(logs); i++ {
+		switch log := logs[i].(type) {
+		case *startLog:
+			activeTran = append(activeTran, logs[i].id)
+		case *commitLog:
+			delete(activeTran, logs[i].id)
+		}
+	}
+
+	// restart all transactions in transaction manager
+	for tran := range activeTran {
+		rm.tm.Begin(tran)
+	}
+
+	// Step 2: Redo, maintaining updated active transactions
+
+	for i := checkpointPos + 1; i < len(logs); i++ {
+		switch log := logs[i].(type) {
+		case *startLog:
+			activeLogsList = append(activeLogsList, log.id)
+			rm.Start(log.id)
+		case *commitLog:
+			delete(activeTransactions,log.id)
+			rm.Commit(log.id)
+			rm.tm.Commit(log.id)
+		default:
+			err := rm.Redo(log)
+			if err != nil {
+				return err
+			}
+		}
+    }
+
+	// Step 3: Undo
+
+	for i := checkpointPos + 1; i < len(logs); i++ {
+		switch log := logs[i].(type) {
+		case *editLog:
+			if isInList(log.id, activeLogsList) {
+				err := rm.Undo(log)
+				if err != nil {
+					return err
+				}
+			}
+		// Step 4: 
+		case *startLog: 
+			rm.tm.Commit(log.id) // remove from transaction list
+    }
+
+	///// Remaining quesitons:
+	// Do i use 'start' and 'commit' correctly?
+	// is this a correct understanding of active transactions?
 }
+
+// helper function that checks if value is in list
+func isInList(value int, list []int) bool {
+    for _, v := range list {
+        if v == value {
+            return true
+        }
+    }
+    return false 
+}
+
 
 // Roll back a particular transaction.
 func (rm *RecoveryManager) Rollback(clientId uuid.UUID) error {

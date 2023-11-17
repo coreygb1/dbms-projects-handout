@@ -240,6 +240,7 @@ func (pager *Pager) LockAllUpdates() {
 	}
 }
 
+
 // [RECOVERY] Enable updates.
 func (pager *Pager) UnlockAllUpdates() {
 	for _, page := range pager.pageTable {
