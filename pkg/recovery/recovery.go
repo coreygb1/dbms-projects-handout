@@ -234,6 +234,8 @@ func (rm *RecoveryManager) Recover() error {
 		switch log := logs[i].(type) {
 		case *startLog:
 			activeTran[log.id] = true
+		case *editLog:
+			activeTran[log.id] = true
 		case *commitLog:
 			delete(activeTran, log.id)
 		}
@@ -249,28 +251,21 @@ func (rm *RecoveryManager) Recover() error {
 	for i := checkpointPos + 1; i < len(logs); i++ {
 		switch log := logs[i].(type) {
 		case *startLog:
-			if activeTran[log.id] {
-				rm.Start(log.id)
-			}
+			rm.Start(log.id)
 		case *commitLog:
-			if activeTran[log.id] {
-				delete(activeTran, log.id)
-				rm.Commit(log.id)
-				rm.tm.Commit(log.id)
-			}
+			delete(activeTran, log.id)
+			rm.Commit(log.id)
+			rm.tm.Commit(log.id)
 		case *tableLog:
 			err := rm.Redo(log)
 			if err != nil {
 				return err
 			}
 		case *editLog:
-			if activeTran[log.id] {
-				err := rm.Redo(log)
-				if err != nil {
-					return err
-				}
+			err := rm.Redo(log)
+			if err != nil {
+				return err
 			}
-		}
     }
 
 	// Step 3: Undo
