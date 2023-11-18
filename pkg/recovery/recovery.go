@@ -242,15 +242,14 @@ func (rm *RecoveryManager) Recover() error {
 	// Restart all transactions in transaction manager
 	for id := range activeTran {
 		rm.tm.Begin(id)
-		// rm.Start(id)
 	}
 
 	// Step 2: Redo, maintaining updated active transactions
 
 	for i := checkpointPos + 1; i < len(logs); i++ {
 		switch log := logs[i].(type) {
-		// case *startLog:
-		// 	rm.Start(log.id)
+		case *startLog:
+			rm.Start(log.id)
 		case *commitLog:
 			delete(activeTran, log.id)
 			rm.Commit(log.id)
