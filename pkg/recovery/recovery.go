@@ -242,7 +242,7 @@ func (rm *RecoveryManager) Recover() error {
 	// Restart all transactions in transaction manager
 	for id := range activeTran {
 		rm.tm.Begin(id)
-		rm.Start(id)
+		// rm.Start(id)
 	}
 
 	// Step 2: Redo, maintaining updated active transactions
