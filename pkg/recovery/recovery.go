@@ -270,15 +270,16 @@ func (rm *RecoveryManager) Recover() error {
 	// Step 3: Undo
 
 	for i := len(logs); i >= 0; i-- {
-		log := logs[i]
-		if activeTran[log.id] {
-			switch log.(type) {
-			case *editLog:
+		switch log := logs[i].(type) {
+		case *editLog:
+			if activeTran[log.id] {
 				err := rm.Undo(log)
 				if err != nil {
 					return err
 				}
-			case *startLog: 
+			}
+		case *startLog: 
+			if activeTran[log.id] {
 				err := rm.tm.Commit(log.id) // remove from transaction list
 				if err != nil {
 					return err
@@ -288,6 +289,7 @@ func (rm *RecoveryManager) Recover() error {
 	}
 	return nil
 }
+
 	
 
 	///// Remaining questions:
@@ -295,7 +297,6 @@ func (rm *RecoveryManager) Recover() error {
 	// Do I need to do anything else for step 4?
 	// Is this a correct understanding of active transactions?
 
-}
 
 // Roll back a particular transaction.
 func (rm *RecoveryManager) Rollback(clientId uuid.UUID) error {
