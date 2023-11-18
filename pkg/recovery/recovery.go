@@ -276,12 +276,12 @@ func (rm *RecoveryManager) Recover() error {
 			case *editLog:
 				err := rm.Undo(log)
 				if err != nil {
-					return errors.New("error 3")
+					return err
 				}
 			case *startLog: 
 				err := rm.tm.Commit(log.id) // remove from transaction list
 				if err != nil {
-					return errors.New("error 4")
+					return err
 				}
 			}
 		}
