@@ -275,7 +275,10 @@ func (rm *RecoveryManager) Recover() error {
 				}
 			}
 		case *startLog: 
-			rm.tm.Commit(log.id) // remove from transaction list
+			err := rm.tm.Commit(clientId) // remove from transaction list
+			if err != nil {
+				return err
+			}
     	}
 	}
 	return nil
@@ -289,7 +292,32 @@ func (rm *RecoveryManager) Recover() error {
 
 // Roll back a particular transaction.
 func (rm *RecoveryManager) Rollback(clientId uuid.UUID) error {
-	panic("function not yet implemented")
+	rm.tm.Begin(clientId)
+	
+	logs, _ := rm.txStack[clientId]
+	if len(logs) == 0 {
+		return errors.New("No logs available for client ID")
+	}
+
+	if _, isStart := logs[0].(*starttLog); !isStart {
+		return errors.New("Must start with start log")
+	}
+	
+	for i := len(logs) - 1; i >= 0; i-- {
+		log := logs[i]
+		if _, isEdit := log.(*editLog); isEdit {
+			err := rm.Undo(log)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	rm.Commit(clientId)
+	err := rm.tm.Commit(clientId)
+	if err != nil {
+		return err
+	}
 }
 
 // Primes the database for recovery
