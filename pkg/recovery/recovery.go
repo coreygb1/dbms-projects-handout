@@ -275,6 +275,7 @@ func (rm *RecoveryManager) Recover() error {
 			}
 		case *startLog: 
 			if activeTran[log.id] {
+				delete(activeTran, log.id)
 				err := rm.tm.Commit(log.id) // remove from transaction list
 				if err != nil {
 					return err
