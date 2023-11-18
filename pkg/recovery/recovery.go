@@ -266,7 +266,8 @@ func (rm *RecoveryManager) Recover() error {
 			if err != nil {
 				return err
 			}
-    }
+    	}
+	}
 
 	// Step 3: Undo
 
@@ -290,6 +291,7 @@ func (rm *RecoveryManager) Recover() error {
 	}
 	return nil
 }
+
 
 	
 
