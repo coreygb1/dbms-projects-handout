@@ -129,7 +129,7 @@ func (rm *RecoveryManager) Redo(log Log) error {
 		payload := fmt.Sprintf("create %s table %s", log.tblType, log.tblName)
 		err := db.HandleCreateTable(rm.d, payload, os.Stdout)
 		if err != nil {
-			return errors.New("table redo error")
+			return errors.New("table make error")
 		}
 	case *editLog:
 		switch log.action {
@@ -269,7 +269,7 @@ func (rm *RecoveryManager) Recover() error {
 
 	// Step 3: Undo
 
-	for i := len(logs); i >= 0; i-- {
+	for i := len(logs) - 1; i >= 0; i-- {
 		switch log := logs[i].(type) {
 		case *editLog:
 			if activeTran[log.id] {
