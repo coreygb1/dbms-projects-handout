@@ -275,7 +275,7 @@ func (rm *RecoveryManager) Recover() error {
 				}
 			}
 		case *startLog: 
-			err := rm.tm.Commit(clientId) // remove from transaction list
+			err := rm.tm.Commit(log.id) // remove from transaction list
 			if err != nil {
 				return err
 			}
@@ -299,7 +299,7 @@ func (rm *RecoveryManager) Rollback(clientId uuid.UUID) error {
 		return errors.New("No logs available for client ID")
 	}
 
-	if _, isStart := logs[0].(*starttLog); !isStart {
+	if _, isStart := logs[0].(*startLog); !isStart {
 		return errors.New("Must start with start log")
 	}
 	
@@ -318,6 +318,8 @@ func (rm *RecoveryManager) Rollback(clientId uuid.UUID) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
 }
 
 // Primes the database for recovery
