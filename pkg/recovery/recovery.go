@@ -129,7 +129,7 @@ func (rm *RecoveryManager) Redo(log Log) error {
 		payload := fmt.Sprintf("create %s table %s", log.tblType, log.tblName)
 		err := db.HandleCreateTable(rm.d, payload, os.Stdout)
 		if err != nil {
-			return err
+			return errors.New("table redo error")
 		}
 	case *editLog:
 		switch log.action {
@@ -141,7 +141,7 @@ func (rm *RecoveryManager) Redo(log Log) error {
 				payload := fmt.Sprintf("update %s %v %v", log.tablename, log.key, log.newval)
 				err = db.HandleUpdate(rm.d, payload)
 				if err != nil {
-					return err
+					return errors.New("table insert error")
 				}
 			}
 		case UPDATE_ACTION:
@@ -152,14 +152,14 @@ func (rm *RecoveryManager) Redo(log Log) error {
 				payload := fmt.Sprintf("insert %v %v into %s", log.key, log.newval, log.tablename)
 				err := db.HandleInsert(rm.d, payload)
 				if err != nil {
-					return err
+					return errors.New("table update error")
 				}
 			}
 		case DELETE_ACTION:
 			payload := fmt.Sprintf("delete %v from %s", log.key, log.tablename)
 			err := db.HandleDelete(rm.d, payload)
 			if err != nil {
-				return err
+				return errors.New("table delete error")
 			}
 		}
 	default:
@@ -254,7 +254,6 @@ func (rm *RecoveryManager) Recover() error {
 	for i := checkpointPos + 1; i < len(logs); i++ {
 		switch log := logs[i].(type) {
 		case *startLog:
-			activeTran[log.id] = true
 			rm.Start(log.id)
 		case *commitLog:
 			delete(activeTran, log.id)
@@ -263,30 +262,33 @@ func (rm *RecoveryManager) Recover() error {
 		default:
 			err := rm.Redo(log)
 			if err != nil {
-				return errors.New("error 2")
+				return err
 			}
 		}
     }
 
 	// Step 3: Undo
 
-	for i := checkpointPos + 1; i < len(logs); i++ {
-		switch log := logs[i].(type) {
-		case *editLog:
-			if activeTran[log.id] {
+	for i := len(logs); i >= 0; i-- {
+		log := logs[i]
+		if activeTran[log.id] {
+			switch log.(type) {
+			case *editLog:
 				err := rm.Undo(log)
 				if err != nil {
 					return errors.New("error 3")
 				}
+			case *startLog: 
+				err := rm.tm.Commit(log.id) // remove from transaction list
+				if err != nil {
+					return errors.New("error 4")
+				}
 			}
-		case *startLog: 
-			err := rm.tm.Commit(log.id) // remove from transaction list
-			if err != nil {
-				return errors.New("error 4")
-			}
-    	}
+		}
 	}
 	return nil
+}
+	
 
 	///// Remaining questions:
 	// Do I use 'Start', 'begin' and 'Commit' correctly? 
