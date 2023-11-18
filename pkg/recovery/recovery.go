@@ -214,7 +214,7 @@ func (rm *RecoveryManager) Recover() error {
 	logs, checkpointPos, err := rm.readLogs()
 	
 	if err != nil {
-		return err
+		return errors.New("error 1")
 	}
 
 	///// Step 1: Get a map of all active transactions
@@ -239,6 +239,11 @@ func (rm *RecoveryManager) Recover() error {
 		}
 	}
 
+	fmt.Println("Active Logs:")
+	for id := range activeTran {
+		fmt.Println(id)
+	}
+
 	// Restart all transactions in transaction manager
 	for id := range activeTran {
 		rm.tm.Begin(id)
@@ -258,7 +263,7 @@ func (rm *RecoveryManager) Recover() error {
 		default:
 			err := rm.Redo(log)
 			if err != nil {
-				return err
+				return errors.New("error 2")
 			}
 		}
     }
@@ -271,13 +276,13 @@ func (rm *RecoveryManager) Recover() error {
 			if activeTran[log.id] {
 				err := rm.Undo(log)
 				if err != nil {
-					return err
+					return errors.New("error 3")
 				}
 			}
 		case *startLog: 
 			err := rm.tm.Commit(log.id) // remove from transaction list
 			if err != nil {
-				return err
+				return errors.New("error 4")
 			}
     	}
 	}
@@ -308,7 +313,7 @@ func (rm *RecoveryManager) Rollback(clientId uuid.UUID) error {
 		if _, isEdit := log.(*editLog); isEdit {
 			err := rm.Undo(log)
 			if err != nil {
-				return err
+				return errors.New("error 5")
 			}
 		}
 	}
