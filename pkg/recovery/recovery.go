@@ -241,7 +241,7 @@ func (rm *RecoveryManager) Recover() error {
 
 	// Restart all transactions in transaction manager
 	for id := range activeTran {
-		if _, found := tm.transactions[clientId]; !found {
+		if _, found := rm.tm.GetTransactions()[id]; !found {
 			rm.tm.Begin(id)
 		}
 	}
