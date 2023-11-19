@@ -242,7 +242,7 @@ func (rm *RecoveryManager) Recover() error {
 	// Restart all transactions in transaction manager
 	for id := range activeTran {
 		rm.tm.Begin(id)
-		rm.Start(log.id)
+		rm.Start(id)
 	}
 
 	// Step 2: Redo, maintaining updated active transactions
@@ -253,11 +253,11 @@ func (rm *RecoveryManager) Recover() error {
 		// 	rm.Start(log.id)
 		case *commitLog:
 			delete(activeTran, log.id)
-			rm.Commit(log.id)
 			err := rm.tm.Commit(log.id)
 			if err != nil {
 				return err
 			}
+			rm.Commit(log.id)
 		default:
 			err := rm.Redo(log)
 			if err != nil {
