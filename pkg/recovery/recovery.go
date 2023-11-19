@@ -228,17 +228,6 @@ func (rm *RecoveryManager) Recover() error {
 		}
 	}
 
-	// Process logs that started after the checkpoint and remove logs that commit after 
-	// the checkpoint
-	// for i := checkpointPos; i < len(logs); i++ {
-	// 	switch log := logs[i].(type) {
-	// 	case *startLog:
-	// 		activeTran[log.id] = true
-	// 	case *commitLog:
-	// 		delete(activeTran, log.id)
-	// 	}
-	// }
-
 	// Restart all transactions in transaction manager
 	for id := range activeTran {
 		if _, found := rm.tm.GetTransactions()[id]; !found {
@@ -264,12 +253,17 @@ func (rm *RecoveryManager) Recover() error {
 			if err != nil {
 				return err
 			}
-		default:
+		case *editLog:
 			err := rm.Redo(log)
 			if err != nil {
 				return err
 			}
-    	}
+		case *editLog:
+			err := rm.Redo(log)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	// Step 3: Undo
