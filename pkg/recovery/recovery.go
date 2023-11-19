@@ -258,7 +258,7 @@ func (rm *RecoveryManager) Recover() error {
 			if err != nil {
 				return err
 			}
-		case *editLog:
+		case *tableLog:
 			err := rm.Redo(log)
 			if err != nil {
 				return err
