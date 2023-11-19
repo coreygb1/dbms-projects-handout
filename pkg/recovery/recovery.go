@@ -253,7 +253,10 @@ func (rm *RecoveryManager) Recover() error {
 		case *commitLog:
 			delete(activeTran, log.id)
 			rm.Commit(log.id)
-			rm.tm.Commit(log.id)
+			err := rm.tm.Commit(log.id)
+			if err != nil {
+				return err
+			}
 		default:
 			err := rm.Redo(log)
 			if err != nil {
@@ -276,6 +279,7 @@ func (rm *RecoveryManager) Recover() error {
 		case *startLog: 
 			if activeTran[log.id] {
 				delete(activeTran, log.id)
+				rm.Commit(log.id)
 				err := rm.tm.Commit(log.id) // remove from transaction list
 				if err != nil {
 					return err
