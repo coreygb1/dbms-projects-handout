@@ -141,7 +141,7 @@ func (rm *RecoveryManager) Redo(log Log) error {
 				payload := fmt.Sprintf("update %s %v %v", log.tablename, log.key, log.newval)
 				err = db.HandleUpdate(rm.d, payload)
 				if err != nil {
-					return errors.New("table insert error")
+					return err
 				}
 			}
 		case UPDATE_ACTION:
