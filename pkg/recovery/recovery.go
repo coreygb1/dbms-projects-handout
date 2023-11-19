@@ -249,8 +249,7 @@ func (rm *RecoveryManager) Recover() error {
 	fmt.Println("Start step 2")
 	for i := checkpointPos; i < len(logs); i++ {
 		switch log := logs[i].(type) {
-		// case *startLog:
-		// 	rm.Start(log.id)
+		case *startLog:
 		case *commitLog:
 			delete(activeTran, log.id)
 			err := rm.tm.Commit(log.id)
