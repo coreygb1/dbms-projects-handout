@@ -242,18 +242,23 @@ func (rm *RecoveryManager) Recover() error {
 	// Restart all transactions in transaction manager
 	for id := range activeTran {
 		if _, found := rm.tm.GetTransactions()[id]; !found {
-			rm.tm.Begin(id)
+			err := rm.tm.Begin(id)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	// Step 2: Redo, maintaining updated active transactions
-	fmt.Println("Start step 2")
 	for i := checkpointPos; i < len(logs); i++ {
 		switch log := logs[i].(type) {
 		case *startLog:
 			activeTran[log.id] = true
 			rm.Start(log.id)
-			rm.tm.Begin(log.id)
+			err := rm.tm.Begin(log.id)
+			if err != nil {
+				return err
+			}
 		case *commitLog:
 			delete(activeTran, log.id)
 			rm.Commit(log.id)
@@ -261,7 +266,7 @@ func (rm *RecoveryManager) Recover() error {
 			if err != nil {
 				return err
 			}
-		case *editLog:
+		default:
 			err := rm.Redo(log)
 			if err != nil {
 				return err
@@ -270,7 +275,6 @@ func (rm *RecoveryManager) Recover() error {
 	}
 
 	// Step 3: Undo
-	fmt.Println("Start step 3")
 	for i := len(logs) - 1; i >= 0; i-- {
 		switch log := logs[i].(type) {
 		case *editLog:
