@@ -254,14 +254,12 @@ func (rm *RecoveryManager) Recover() error {
 		switch log := logs[i].(type) {
 		case *startLog:
 			activeTran[log.id] = true
-			rm.Start(log.id)
 			err := rm.tm.Begin(log.id)
 			if err != nil {
 				return err
 			}
 		case *commitLog:
 			delete(activeTran, log.id)
-			rm.Commit(log.id)
 			err := rm.tm.Commit(log.id)
 			if err != nil {
 				return err
@@ -287,7 +285,6 @@ func (rm *RecoveryManager) Recover() error {
 		case *startLog: 
 			if activeTran[log.id] {
 				delete(activeTran, log.id)
-				rm.Commit(log.id)
 				err := rm.tm.Commit(log.id) // remove from transaction list
 				if err != nil {
 					return err
