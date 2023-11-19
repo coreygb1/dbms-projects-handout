@@ -246,7 +246,7 @@ func (rm *RecoveryManager) Recover() error {
 
 	// Step 2: Redo, maintaining updated active transactions
 
-	for i := checkpointPos + 1; i < len(logs); i++ {
+	for i := checkpointPos; i < len(logs); i++ {
 		switch log := logs[i].(type) {
 		case *startLog:
 			rm.Start(log.id)
