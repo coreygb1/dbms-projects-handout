@@ -230,14 +230,14 @@ func (rm *RecoveryManager) Recover() error {
 
 	// Process logs that started after the checkpoint and remove logs that commit after 
 	// the checkpoint
-	for i := checkpointPos; i < len(logs); i++ {
-		switch log := logs[i].(type) {
-		case *startLog:
-			activeTran[log.id] = true
-		case *commitLog:
-			delete(activeTran, log.id)
-		}
-	}
+	// for i := checkpointPos; i < len(logs); i++ {
+	// 	switch log := logs[i].(type) {
+	// 	case *startLog:
+	// 		activeTran[log.id] = true
+	// 	case *commitLog:
+	// 		delete(activeTran, log.id)
+	// 	}
+	// }
 
 	// Restart all transactions in transaction manager
 	for id := range activeTran {
@@ -251,7 +251,9 @@ func (rm *RecoveryManager) Recover() error {
 	for i := checkpointPos; i < len(logs); i++ {
 		switch log := logs[i].(type) {
 		case *startLog:
-		 	rm.Start(log.id)
+			activeTran[log.id] = true
+			rm.Start(log.id)
+			rm.tm.Begin(log.id)
 		case *commitLog:
 			delete(activeTran, log.id)
 			rm.Commit(log.id)
